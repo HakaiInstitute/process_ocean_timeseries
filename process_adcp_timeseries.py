@@ -10,7 +10,6 @@ import glob
 
 # File path
 dest_dir = r"/mnt/d/hakai_ADCP/"
-# TODO REMOVE dest_dir = r"D:\hakai_ADCP/"
 
 # Define Spreadsheet ID
 # Hakai ADCP Deployment log
@@ -67,9 +66,9 @@ hakai.hakai_log_to_ios_csv(df, hakai_to_ios_map, dest_dir)
 # Retrieve Raw ADCP data (*.000)
 # Create a dictionary with the output file name as key and link to the data as value
 adcp_files = {row['file_name']+'.000': row['Link to Raw Data'] for index, row in df.iterrows()}
-#hakai.download_file(adcp_files, dest_dir)
+hakai.download_file(adcp_files, dest_dir)
 
-# Apply pycurrents_ADCP_processing to get:
+# Apply pycurrent_ADCP_processing to get:
 #  Level 0 NetCDF ( raw data converted to NetCDF)
 #  Read Level 0  Data and retrieve following information automatically:
 #   + Detect start/end times to update cut_lead_ensembles and cut_trail_ensembles
@@ -80,7 +79,7 @@ for raw_file in raw_file_list:
 
     # Perform Initial L0 processing on the raw data and export as a netCDF file
     ncname_L0 = ADCP_processing_L0.nc_create_L0(f_adcp=raw_file, f_meta=meta_file, dest_dir=dest_dir)
-    # TODO REMOVE ncname_L0 = dest_dir+'Hakai_RDI-ADCP-Workhorse-SN18834_Calvert-Starfish_20200709.adcp.L0.nc'
+
     # Read Level 0 Data
     ds = xr.open_dataset(ncname_L0)
 
@@ -115,7 +114,6 @@ for raw_file in raw_file_list:
 
     # Process L1 Data
     ncname_L1 = ADCP_processing_L1.nc_create_L1(inFile=raw_file, file_meta=meta_l1, dest_dir=dest_dir)
-    #TODO REMOVE ncname_L1 = dest_dir + 'Hakai_RDI-ADCP-Workhorse-SN18834_Calvert-Starfish_20200709.adcp.L1.nc'
 
     # Read Level 1 dataset and extra steps
     ds = xr.open_dataset(ncname_L1)
