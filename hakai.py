@@ -29,11 +29,18 @@ def transform_hakai_log(df, dest_dir):
         print(col)
         time = pd.to_datetime(df[col], errors='coerce')
 
+        # Standardize Empties to None
+        df[col].fillna('', inplace=True)
+
+        # If all column is PST to_datetime gives back unaware timezone time.
+        if all((df[col].dropna().str.find('PST') > 0) | (df[col] == '')):
+            time = time.dt.tz_localize('America/Vancouver')
+
         # Loop through each value and make sure that a timezone is assigned
         for index, value in time.iteritems():
-            if pd.notnull(value) and value != 'NaT' and value.tzinfo is None:
+            if pd.notnull(value) and value != 'NaT' and value.tz is None:
                 if df[col][index].find('PST'):
-                    time[index] = timezone('America/Vancouver').localize(time[index])
+                    time[index] = timezone('America/Vancouver').localize(value)
                     print(' - "' + df[col][index] + '" converted to "' + str(time[index]) + '"')
         df[col] = time
 
@@ -51,9 +58,11 @@ def transform_hakai_log(df, dest_dir):
     # Convert all times to UTC
     df = df.replace('NaT', pd.NaT)
     for col in time_columns:
-        for index, value in df[col].iteritems():
-            if pd.notnull(value):
-                df.at[index, col] = value.astimezone(timezone('UTC'))
+        #TODO replace
+        df[col] = df[col].dt.tz_convert(timezone('UTC'))
+        #for index, value in df[col].iteritems():
+         #   if pd.notnull(value):
+          #      df.at[index, col] = value.astimezone(timezone('UTC'))
 
     # Get Magnetic Declination from NRCAN
     for index, row in df.iterrows():
@@ -85,7 +94,7 @@ def transform_hakai_log(df, dest_dir):
             lat_loc = []
             lon_loc = []
             site_range = []
-            n_station = 4
+            n_station = len(dd.filter(regex='Latitude:Triangulation'))
             for ii in range(n_station):
                 if pd.notnull(dd['Latitude:Triangulation' + str(ii + 1)]):
                     lat_loc.append(dd['Latitude:Triangulation' + str(ii + 1)])
