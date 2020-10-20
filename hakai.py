@@ -28,17 +28,19 @@ def transform_hakai_log(df, dest_dir):
     for col in time_columns:
         print(col)
         time = pd.to_datetime(df[col], errors='coerce')
+        df[time_columns] = df[time_columns].replace('', pd.NaT)
+        df[time_columns] = df[time_columns].fillna(pd.NaT)
 
-        # Standardize Empties to None
-        df[col].fillna('', inplace=True)
-
-        # If all column is PST to_datetime gives back unaware timezone time.
-        if all((df[col].dropna().str.find('PST') > 0) | (df[col] == '')):
-            time = time.dt.tz_localize('America/Vancouver')
+        # If all have PST convert to Vancouver local time
+        if (time.dt.tz is None) & all(df[col].dropna().str.find('PST') > 0):
+            time = time.dt.tz_localize(timezone('America/Vancouver'))
+            for i, j in zip(df[col], time):
+                if i is not pd.NaT:
+                    print(' - "' + i + '" converted to "' + str(j.strftime('%Y-%m-%d %H:%M:%S %Z')) + '"')
 
         # Loop through each value and make sure that a timezone is assigned
         for index, value in time.iteritems():
-            if pd.notnull(value) and value != 'NaT' and value.tz is None:
+            if pd.notnull(value) and value.tz is None:
                 if df[col][index].find('PST'):
                     time[index] = timezone('America/Vancouver').localize(value)
                     print(' - "' + df[col][index] + '" converted to "' + str(time[index]) + '"')
