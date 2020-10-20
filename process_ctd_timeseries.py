@@ -34,7 +34,7 @@ df = hakai.transform_hakai_log(df, dest_dir)
 # Download CTD data
 # Create a dictionary with the output file name as key and link to the data as value
 ctd_files = {row['file_name']+'.cnv': row['Link to Raw Data'] for index, row in df.iterrows()}
-#hakai.download_file(ctd_files, dest_dir)
+hakai.download_file(ctd_files, dest_dir)
 
 # Loop through each files
 for index, row in df.iterrows():
@@ -42,6 +42,7 @@ for index, row in df.iterrows():
         # Read Seabird CNV
         print('Read '+row['file_name']+'.cnv')
         c = fCNV(dest_dir + row['file_name']+'.cnv')
+
         # Run QARTOD
 
         # Add Metadata
