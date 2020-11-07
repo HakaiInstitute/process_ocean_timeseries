@@ -202,3 +202,48 @@ def download_file(file_dict, dest_dir):
             print('Google file_id='+google_file_id)
             google.get_google_drive_file(google_file_id, dest_dir + key)
             # TODO make to download tool compatible with not just google drive
+
+def qartod_ctd_time_series_config():
+    config = {
+        'DEPTH': {
+            'qartod': {
+                'gross_range_test': {
+                    'suspect_span': [0, 11000],
+                    'fail_span': [-5, 11000]
+                }
+            }
+        },
+        'prdM': {
+            'qartod': {
+                'gross_range_test': {
+                    'suspect_span': [0, 11000],
+                    'fail_span': [-5, 11000]
+                }
+            }
+        },
+        'tv290C': {
+            'qartod': {
+                'gross_range_test': {
+                    'suspect_span': [-2, 60],
+                    'fail_span': [-3, 100]
+                }
+            }
+        },
+        'PSAL': {
+            'qartod': {
+                'gross_range_test': {
+                    'suspect_span': [5, 40],
+                    'fail_span': [0, 50]},
+                "flat_line_test": {
+                    "tolerance": 0.001,
+                    "suspect_threshold": 10800,
+                    "fail_threshold": 21600},
+                "rate_of_change_test": {
+                    "threshold": 0.001},
+                "spike_test": {
+                    "suspect_threshold": 0.8,
+                    "fail_threshold": 3},
+                "aggregate": {}
+            }
+        }
+    }

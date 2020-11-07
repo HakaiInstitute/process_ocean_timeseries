@@ -5,8 +5,8 @@ import process
 from seabird.cnv import fCNV
 from seabird.netcdf import cnv2nc
 import xarray as xr
-import pandas as pd
-import numpy as np
+from ioos_qc import qartod
+from ioos_qc.config import NcQcConfig
 import glob
 
 # File path
@@ -39,16 +39,21 @@ hakai.download_file(ctd_files, dest_dir)
 # Loop through each files
 for index, row in df.iterrows():
     if row['Link to Raw Data']:
+        file_output = dest_dir + row['file_name']
         # Read Seabird CNV
         print('Read '+row['file_name']+'.cnv')
-        c = fCNV(dest_dir + row['file_name']+'.cnv')
-
-        # Run QARTOD
+        c = fCNV(file_output+'.cnv')
 
         # Add Metadata
 
         # Save to NetCDF
         print('Save to '+row['file_name']+'.nc')
-        cnv2nc(c, dest_dir + row['file_name']+'.nc')
+        cnv2nc(c, file_output+'.nc')
+
+        # Run QARTOD on the NetCDF file
+        # Retrieve Hakai QARTOD Tests
+        qc = NcQcConfig(config)
+        qartod_results = qc.run(file_output + '.nc')
+        qc.save_to_netcdf(file_output+ '.nc', qartod_results)
 
 print('works!')
