@@ -28,7 +28,7 @@ def transform_hakai_log(df, dest_dir):
     for col in time_columns:
         print(col)
         time = pd.to_datetime(df[col], errors='coerce')
-        df[time_columns] = df[time_columns].replace('', pd.NaT)
+        df[time_columns] = df[time_columns].replace(r'^\s*$', pd.NaT, regex=True)
         df[time_columns] = df[time_columns].fillna(pd.NaT)
 
         # If all have PST convert to Vancouver local time
