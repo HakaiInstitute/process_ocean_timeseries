@@ -49,9 +49,13 @@ def detect_start_end(ds, time_variable, pressure_variable, good_data_mask,
         axes[1].yaxis.tick_right()
         axes[1].yaxis.set_label_position("right")
 
-        time_interval = pd.Timedelta(hours=1)
-        axes[0].set_xlim([first_good_record_time.values - time_interval, first_good_record_time.values + time_interval])
-        axes[1].set_xlim([last_good_record_time.values - time_interval, last_good_record_time.values + time_interval])
+        # Try to zoom within 1 hour of deployment and retrieval times if possible
+        try:
+            time_interval = pd.Timedelta(hours=1)
+            axes[0].set_xlim([first_good_record_time.values - time_interval, first_good_record_time.values + time_interval])
+            axes[1].set_xlim([last_good_record_time.values - time_interval, last_good_record_time.values + time_interval])
+        finally:
+            print('Can''t recognize time variable')
 
         axes[0].legend()
         plt.draw()
