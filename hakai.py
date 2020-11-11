@@ -60,7 +60,7 @@ def transform_hakai_log(df, dest_dir):
     # Convert all times to UTC
     df = df.replace('NaT', pd.NaT)
     for col in time_columns:
-        #TODO replace
+        # TODO replace
         df[col] = df[col].dt.tz_convert(timezone('UTC'))
         #for index, value in df[col].iteritems():
          #   if pd.notnull(value):
@@ -205,31 +205,66 @@ def download_file(file_dict, dest_dir):
 
 def qartod_ctd_time_series_config():
     config = {
-        'DEPTH': {
+        'depth': {
             'qartod': {
                 'gross_range_test': {
                     'suspect_span': [0, 11000],
-                    'fail_span': [-5, 11000]
-                }
+                    'fail_span': [-5, 11000]},
+                "aggregate": {}
             }
         },
-        'prdM': {
+        'PRESPR01': {
             'qartod': {
                 'gross_range_test': {
                     'suspect_span': [0, 11000],
-                    'fail_span': [-5, 11000]
-                }
+                    'fail_span': [-5, 11000]},
+                "flat_line_test": {
+                    "tolerance": 0.001,
+                    "suspect_threshold": 3600,
+                    "fail_threshold": 10800},
+                "rate_of_change_test": {
+                    "threshold": 1},
+                "spike_test": {
+                    "suspect_threshold": 1,
+                    "fail_threshold": 2},
+                "aggregate": {}
             }
         },
-        'tv290C': {
+        'TEMPS901': {
             'qartod': {
                 'gross_range_test': {
                     'suspect_span': [-2, 60],
-                    'fail_span': [-3, 100]
-                }
+                    'fail_span': [-3, 100]},
+                "flat_line_test": {
+                        "tolerance": 0.001,
+                        "suspect_threshold": 3600,
+                        "fail_threshold": 10800},
+                "rate_of_change_test": {
+                        "threshold": 0.01},
+                "spike_test": {
+                        "suspect_threshold": 0.5,
+                        "fail_threshold": 1},
+                "aggregate": {}
             }
         },
-        'PSAL': {
+        'CNDCST01': {
+            'qartod': {
+                'gross_range_test': {
+                    'suspect_span': [0, 100],
+                    'fail_span': [-0.1, 120]},
+                "flat_line_test": {
+                    "tolerance": 0.001,
+                    "suspect_threshold": 10800,
+                    "fail_threshold": 21600},
+                "rate_of_change_test": {
+                    "threshold": 0.01},
+                "spike_test": {
+                    "suspect_threshold": 0.2,
+                    "fail_threshold": 1},
+                "aggregate": {}
+            },
+        },
+        'PSALST01': {
             'qartod': {
                 'gross_range_test': {
                     'suspect_span': [5, 40],
@@ -239,11 +274,29 @@ def qartod_ctd_time_series_config():
                     "suspect_threshold": 10800,
                     "fail_threshold": 21600},
                 "rate_of_change_test": {
-                    "threshold": 0.001},
+                    "threshold": 0.01},
                 "spike_test": {
-                    "suspect_threshold": 0.8,
-                    "fail_threshold": 3},
+                    "suspect_threshold": 0.2,
+                    "fail_threshold": 1},
+                "aggregate": {}
+            },
+        },
+        'DOXYZZ01': {
+            'qartod': {
+                'gross_range_test': {
+                    'suspect_span': [1, 15],
+                    'fail_span': [0, 20]},
+                "flat_line_test": {
+                    "tolerance": 0.001,
+                    "suspect_threshold": 3600,
+                    "fail_threshold": 10800},
+                "rate_of_change_test": {
+                    "threshold": 0.01},
+                "spike_test": {
+                    "suspect_threshold": 0.5,
+                    "fail_threshold": 1},
                 "aggregate": {}
             }
         }
     }
+    return config
