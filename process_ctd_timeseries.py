@@ -4,13 +4,16 @@ import process
 
 from seabird.cnv import fCNV
 from seabird.netcdf import cnv2nc
-import xarray as xr
+
 from ioos_qc import qartod
 from ioos_qc.config import NcQcConfig
-import glob
+
+import xarray as xr
+import netCDF4
+import re
 
 # File path
-#dest_dir = r"/mnt/d/hakai_CTD/"
+# dest_dir = r"/mnt/d/hakai_CTD/"
 dest_dir = r"D:/hakai_CTD/"
 
 # Define Spreadsheet ID
@@ -43,8 +46,6 @@ for index, row in df.iterrows():
         # Read Seabird CNV
         print('Read '+row['file_name']+'.cnv')
         c = fCNV(file_output+'.cnv')
-
-        # Add Metadata
 
         # Save to NetCDF
         print('Save to '+row['file_name']+'.nc')
@@ -79,6 +80,19 @@ for index, row in df.iterrows():
                     value = str(value)  # Likely datetime
 
                 nc.setncattr(key.split('(')[0].strip(), value)  # Keep anything before (
+
+        # Find Crop data to keep in water only
+        ds = xr.open_dataset(file_output+'.nc')
+        start_end_results = process.detect_start_end(ds,
+                                                     'time', 'PRESPR01',
+                                                     time_dim='time',
+                                                     figure_path=file_output+'_crop.png')
+
+        # Output Cropped time series a L1
+        ds.loc[dict(time=slice(start_end_results['first_good_record_time'],
+                               start_end_results['last_good_record_time']))]\
+            .to_netcdf(file_output+'_L1.nc')
+
         # Run QARTOD on the NetCDF file
         # Retrieve Hakai QARTOD Tests
         qc = NcQcConfig(config)
