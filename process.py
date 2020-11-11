@@ -4,16 +4,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def detect_start_end(ds, time_variable, pressure_variable, good_data_mask,
+def detect_start_end(ds, time_variable, pressure_variable,
+                     good_data_mask=None,
                      pressure_threshold=3,
                      pressure_difference_threshold=0.3,
+                     time_dim='time',
                      plot_results=True,
                      figure_path='detect_deployment_startend.png'):
 
     # Create mask of good data
     is_good_data = (ds[pressure_variable] > pressure_threshold) & \
-                   (abs(ds[pressure_variable].diff('time', label='lower')) < pressure_difference_threshold) & \
-                   good_data_mask
+                   (abs(ds[pressure_variable].differentiate(time_dim)) < pressure_difference_threshold) \
+
+    # Is mask input if given
+    if good_data_mask is not None:
+        is_good_data = is_good_data & good_data_mask
 
     ds_cropped = ds.where(is_good_data, drop=True)
 
@@ -49,9 +54,13 @@ def detect_start_end(ds, time_variable, pressure_variable, good_data_mask,
         axes[1].yaxis.tick_right()
         axes[1].yaxis.set_label_position("right")
 
-        time_interval = pd.Timedelta(hours=1)
-        axes[0].set_xlim([first_good_record_time.values - time_interval, first_good_record_time.values + time_interval])
-        axes[1].set_xlim([last_good_record_time.values - time_interval, last_good_record_time.values + time_interval])
+        # Try to zoom within 1 hour of deployment and retrieval times if possible
+        try:
+            time_interval = pd.Timedelta(hours=1)
+            axes[0].set_xlim([first_good_record_time.values - time_interval, first_good_record_time.values + time_interval])
+            axes[1].set_xlim([last_good_record_time.values - time_interval, last_good_record_time.values + time_interval])
+        finally:
+            print('Can''t recognize time variable')
 
         axes[0].legend()
         plt.draw()
