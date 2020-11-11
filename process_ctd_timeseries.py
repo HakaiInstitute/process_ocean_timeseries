@@ -95,8 +95,11 @@ for index, row in df.iterrows():
 
         # Run QARTOD on the NetCDF file
         # Retrieve Hakai QARTOD Tests
-        qc = NcQcConfig(config)
-        qartod_results = qc.run(file_output + '.nc')
-        qc.save_to_netcdf(file_output+ '.nc', qartod_results)
+        config = hakai.qartod_ctd_time_series_config()
+        qc = NcQcConfig(config, tinp='time')
+        qartod_results = qc.run(file_output + '_L1.nc')
+
+        # Upload QARTOD Flags to NetCDF
+        qc.save_to_netcdf(file_output + '_L1.nc', qartod_results)
 
 print('works!')
