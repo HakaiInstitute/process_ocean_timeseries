@@ -14,7 +14,7 @@ def detect_start_end(ds, time_variable, pressure_variable,
 
     # Create mask of good data
     is_good_data = (ds[pressure_variable] > pressure_threshold) & \
-                   (abs(ds[pressure_variable].differentiate(time_dim)) < pressure_difference_threshold) \
+                   (abs(ds[pressure_variable].diff(time_dim)) < pressure_difference_threshold) \
 
     # Is mask input if given
     if good_data_mask is not None:
