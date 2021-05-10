@@ -7,6 +7,7 @@ from pytz import timezone
 
 import matplotlib.pyplot as plt
 import re
+import warnings
 
 import utm
 
@@ -14,40 +15,51 @@ from . import google
 from . import geo
 
 
+def convert_hakai_datetime(date_str):
+    """Simple method to parse the date/time variables available within the Hakai Instrument logs. The tool will convert
+    PDT/PST to local time America/Vancouver or UTC if specified."""
+    if not date_str:
+        return pd.NaT
+
+    # Retrieve timezone
+    date_str_tz = re.search('PST|PDT|UTC|GMT', date_str, re.IGNORECASE)
+    if date_str_tz:
+        date_str = date_str.replace(date_str_tz[0], '')
+
+    date = pd.to_datetime(date_str, errors='coerce')
+
+    # Handle the timezone
+    if date_str_tz:
+        if date_str_tz[0].upper() in ['PST', 'PDT']:
+            date = timezone('America/Vancouver').localize(date)
+        elif date_str_tz[0].upper() in ['GMT', 'UTC']:
+            date = timezone('UTC').localize(date)
+        else:
+            raise RuntimeError('Can''t recognize the timezone: {0}'.format(timezone[0]))
+    else:
+        warnings('No timezone information avaiable, we''ll assume UTC.', UserWarning)
+        date = timezone('UTC').localize(date)
+
+    return date
+
+
 def transform_hakai_log(df, dest_dir):
+
     # Convert latitude/longitude string data to decimal
     for col in df.filter(regex='latitude|Latitude|Longitude|longitude').columns:
         if df[col].dtypes == object:
             df[col] = df[col].apply(geo.dms2dd)
 
     # Convert time columns to datetime objects and Convert PST to local Vancouver time
-    df = df.replace({'-': None, 'NaT': pd.NaT})
+    df = df.replace({'-': None, 'NaT': None, pd.NA: None}).replace({'^\s*$': None}, regex=True)
     time_columns = df.filter(regex='Time|Clock').columns
 
     for col in time_columns:
-        print(col)
-        time = pd.to_datetime(df[col], errors='coerce')
-        df[time_columns] = df[time_columns].replace(r'^\s*$', pd.NaT, regex=True).fillna(pd.NaT)
-
-        # If all have PST convert to Vancouver local time
-        if (time.dt.tz is None) & all(df[col].dropna().str.find('PST') > 0):
-            time = time.dt.tz_localize(timezone('America/Vancouver'))
-            for i, j in zip(df[col], time):
-                if i is not pd.NaT:
-                    print(' - "' + i + '" converted to "' + str(j.strftime('%Y-%m-%d %H:%M:%S %Z')) + '"')
-
-        # Loop through each value and make sure that a timezone is assigned
-        for index, value in time.iteritems():
-            if pd.notnull(value) and value.tz is None:
-                if df[col][index].find('PST'):
-                    time[index] = timezone('America/Vancouver').localize(value)
-                    print(' - "' + df[col][index] + '" converted to "' + str(time[index]) + '"')
-        df[col] = time
+        df[col] = df[col].apply(convert_hakai_datetime)
 
     # Retrieve Instrument Time zone from Internal Clock Sync and/or Start Time
     print('Retrieve Time Zone Internal Clock Sync or Start Time')
     for index, row in df.iterrows():
-
         syncTimeZone = row['Internal Clock Sync Time'].tzinfo
         startTimeZone = row['Start Time'].tzinfo
 
@@ -56,13 +68,8 @@ def transform_hakai_log(df, dest_dir):
                 'Internal Clock Sync Time'].utcoffset().total_seconds()
 
     # Convert all times to UTC
-    df = df.replace('NaT', pd.NaT)
     for col in time_columns:
-        # TODO replace
         df[col] = df[col].dt.tz_convert(timezone('UTC'))
-        #for index, value in df[col].iteritems():
-         #   if pd.notnull(value):
-          #      df.at[index, col] = value.astimezone(timezone('UTC'))
 
     # Get Magnetic Declination from NRCAN
     for index, row in df.iterrows():
@@ -77,9 +84,12 @@ def transform_hakai_log(df, dest_dir):
     # Define file name
     # 'Hakai_[Manufacturer]-[Instrumen Type]_[Instrument Model]-SN[Serial Number]_[Hakai Region]-[Station]_[StartDate: yyyymmdd]{opt: _[End Date]}
     for index, row in df.iterrows():
-        file_name_out = 'Hakai_' + row['Instrument Manufacturer'] + '-' + row['Instrument Type'] + '-' + row[
-            'Instrument Sub Type'] + '-SN' + row['Serial Number'] + '_' + row['Region'] + '-' + row['Site'] + '_'
-        file_name_out = file_name_out + row['Deployment Time'].strftime('%Y%m%d')
+        file_name_out = 'Hakai_' + \
+                        row['Instrument Manufacturer'] + '-' + row['Instrument Type'] + '-' + \
+                        row['Instrument Sub Type'] + '-SN' + row['Serial Number'] + '_'\
+                        + row['Region'] + '-' + row['Site'] + '_' + \
+                        row['Deployment Time'].strftime('%Y%m%d')
+
         if pd.notnull(row['Retrieval Time']):
             file_name_out = file_name_out + '-' + row['Retrieval Time'].strftime('%Y%m%d')
 
