@@ -1,0 +1,2 @@
+include process_ocean_data/credentials_quickstart.json
+recursive-include process_ocean_data/qc_config *
