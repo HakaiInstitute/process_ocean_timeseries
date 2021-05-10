@@ -9,7 +9,7 @@ import numpy as np
 import glob
 
 # File path
-dest_dir = r"/mnt/d/hakai_ADCP/"
+dest_dir = r"/mnt/e/hakai_ADCP/"
 
 # Define Spreadsheet ID
 # Hakai ADCP Deployment log
@@ -66,7 +66,7 @@ hakai.hakai_log_to_ios_csv(df, hakai_to_ios_map, dest_dir)
 # Retrieve Raw ADCP data (*.000)
 # Create a dictionary with the output file name as key and link to the data as value
 adcp_files = {row['file_name']+'.000': row['Link to Raw Data'] for index, row in df.iterrows()}
-hakai.download_file(adcp_files, dest_dir)
+hakai.download_on_google_drive(adcp_files, dest_dir)
 
 # Apply pycurrent_ADCP_processing to get:
 #  Level 0 NetCDF ( raw data converted to NetCDF)

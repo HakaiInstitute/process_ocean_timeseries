@@ -6,11 +6,12 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
+import requests
 
 import pandas as pd
 
 # Create functions to be used for handling Hakai Metadata
-SCOPES = 'https://www.googleapis.com/auth/drive.readonly'
+SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 # Google Drive Interaction
 
 

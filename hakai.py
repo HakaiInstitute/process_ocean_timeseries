@@ -21,15 +21,13 @@ def transform_hakai_log(df, dest_dir):
             df[col] = df[col].apply(utils.dms2dd)
 
     # Convert time columns to datetime objects and Convert PST to local Vancouver time
-    df = df.replace('-', None)
+    df = df.replace({'-': None, 'NaT': pd.NaT})
     time_columns = df.filter(regex='Time|Clock').columns
-    df = df.replace('NaT', pd.NaT)
 
     for col in time_columns:
         print(col)
         time = pd.to_datetime(df[col], errors='coerce')
-        df[time_columns] = df[time_columns].replace(r'^\s*$', pd.NaT, regex=True)
-        df[time_columns] = df[time_columns].fillna(pd.NaT)
+        df[time_columns] = df[time_columns].replace(r'^\s*$', pd.NaT, regex=True).fillna(pd.NaT)
 
         # If all have PST convert to Vancouver local time
         if (time.dt.tz is None) & all(df[col].dropna().str.find('PST') > 0):
@@ -193,8 +191,9 @@ def hakai_log_to_ios_csv(df, hakai_to_ios_map, dest_dir):
         df_out.to_csv(dest_dir + rows['file_name'] + '_meta.csv')
 
 
-def download_file(file_dict, dest_dir):
-
+def download_on_google_drive(file_dict, dest_dir):
+    """ Method to download a file saved on google drive based on a share link with it.
+    The tool will then retrieve the file google id and the download it through the google package."""
     for key, value in file_dict.items():
         if value:
             print('Download ' + key)

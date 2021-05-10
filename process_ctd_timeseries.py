@@ -5,16 +5,19 @@ import process
 from seabird.cnv import fCNV
 from seabird.netcdf import cnv2nc
 
-from ioos_qc import qartod
 from ioos_qc.config import NcQcConfig
+
+from ioos_qc.config import Config
+from ioos_qc.streams import XarrayStream
 
 import xarray as xr
 import netCDF4
 import re
+import json
 
 # File path
 # dest_dir = r"/mnt/d/hakai_CTD/"
-dest_dir = r"D:/hakai_CTD/"
+dest_dir = r"E:/hakai_CTD/"
 
 # Define Spreadsheet ID
 # Hakai ADCP Deployment log
@@ -37,7 +40,7 @@ df = hakai.transform_hakai_log(df, dest_dir)
 # Download CTD data
 # Create a dictionary with the output file name as key and link to the data as value
 ctd_files = {row['file_name']+'.cnv': row['Link to Raw Data'] for index, row in df.iterrows()}
-hakai.download_file(ctd_files, dest_dir)
+hakai.download_on_google_drive(ctd_files, dest_dir)
 
 # Loop through each files
 for index, row in df.iterrows():
@@ -58,12 +61,12 @@ for index, row in df.iterrows():
 
         # Latitude
         latitude = nc.createVariable('latitude', float)
-        latitude.units = 'degrees North'
+        latitude.units = 'degrees_north'
         latitude[:] = row['Latitude']
 
         # Longitude
         longitude = nc.createVariable('longitude', float)
-        longitude.units = 'degrees East'
+        longitude.units = 'degrees_east'
         longitude[:] = row['Longitude']
 
         # Station
@@ -87,10 +90,8 @@ for index, row in df.iterrows():
 
         # Find Crop data to keep in water only
         ds = xr.open_dataset(file_output+'_L0.nc')
-        start_end_results = process.detect_start_end(ds,
-                                                     'time', 'PRESPR01',
-                                                     time_dim='time',
-                                                     figure_path=file_output+'_crop.png')
+        start_end_results = process.detect_start_end(ds, 'time', 'PRESPR01',
+                                                     figure_path=file_output + '_crop.png')
 
         # Output Cropped time series a L1
         ds.loc[dict(time=slice(start_end_results['first_good_record_time'],
