@@ -99,7 +99,9 @@ for index, row in df.iterrows():
 
         # Run QARTOD on the NetCDF file
         # Retrieve Hakai QARTOD Tests
-        config = hakai.qartod_ctd_time_series_config()
+        with open('qc_config/seabird_ctd_time_series.json') as f:
+            config = json.load(f)
+
         qc = NcQcConfig(config, tinp='time')
         qartod_results = qc.run(file_output + '_L1.nc')
 
