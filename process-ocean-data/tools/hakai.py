@@ -10,15 +10,15 @@ import re
 
 import utm
 
-import google
-import utils
+from . import google
+from . import geo
 
 
 def transform_hakai_log(df, dest_dir):
     # Convert latitude/longitude string data to decimal
     for col in df.filter(regex='latitude|Latitude|Longitude|longitude').columns:
         if df[col].dtypes == object:
-            df[col] = df[col].apply(utils.dms2dd)
+            df[col] = df[col].apply(geo.dms2dd)
 
     # Convert time columns to datetime objects and Convert PST to local Vancouver time
     df = df.replace({'-': None, 'NaT': pd.NaT})
@@ -69,9 +69,9 @@ def transform_hakai_log(df, dest_dir):
         start_time = row['Deployment Time']
 
         df.at[index, 'Magnetic Declination'], df.at[index, 'Yearly Magnetic Drift'] = \
-            utils.get_mag_dec_from_nrcan(start_time,
-                                         row['Instrument Deployment Latitude'],
-                                         row['Instrument Deployment Longitude'])
+            geo.get_mag_dec_from_nrcan(start_time,
+                                       row['Instrument Deployment Latitude'],
+                                       row['Instrument Deployment Longitude'])
     # TODO Maybe add something to the history than mentions where come from the magnetic declination
 
     # Define file name
@@ -103,8 +103,8 @@ def transform_hakai_log(df, dest_dir):
             # Convert to UTM coordinates
             utm_loc = utm.from_latlon(np.array(lat_loc), np.array(lon_loc))
             # Apply triangulation
-            utm_triang = utils.trilateration_from_utm(np.array(site_range),
-                                                      np.array([[utm_loc[0][ii], utm_loc[1][ii]]
+            utm_triang = geo.trilateration_from_utm(np.array(site_range),
+                                                    np.array([[utm_loc[0][ii], utm_loc[1][ii]]
                                                                 for ii in range(len(lat_loc))]))
             # Convert back to lat/long coordinates
             ll_triang = utm.to_latlon(utm_triang[0], utm_triang[1], utm_loc[2], utm_loc[3])

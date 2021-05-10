@@ -1,6 +1,6 @@
-import google
-import hakai
-import process
+from .tools import google
+from .tools import hakai
+from .tools import process
 
 from pycurrents_ADCP_processing import ADCP_processing_L0, ADCP_processing_L1
 import xarray as xr

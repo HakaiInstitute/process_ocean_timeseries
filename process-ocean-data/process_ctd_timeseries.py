@@ -1,20 +1,15 @@
-import google
-import hakai
-import process
+from tools import google, hakai, process
 
 from seabird.cnv import fCNV
 from seabird.netcdf import cnv2nc
 
 from ioos_qc.config import NcQcConfig
 
-from ioos_qc.config import Config
-from ioos_qc.streams import XarrayStream
-
 import xarray as xr
 import netCDF4
-import re
-import json
 
+import json
+from os import path
 # File path
 # dest_dir = r"/mnt/d/hakai_CTD/"
 dest_dir = r"E:/hakai_CTD/"
@@ -100,7 +95,8 @@ for index, row in df.iterrows():
 
         # Run QARTOD on the NetCDF file
         # Retrieve Hakai QARTOD Tests
-        with open('qc_config/seabird_ctd_time_series.json') as f:
+        ctd_qc_config = path.join(path.dirname(__file__), 'qc_config/seabird_ctd_time_series.json')
+        with open(ctd_qc_config) as f:
             config = json.load(f)
 
         qc = NcQcConfig(config, tinp='time')
