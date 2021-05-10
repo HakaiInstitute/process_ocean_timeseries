@@ -1,14 +1,14 @@
 
 from __future__ import print_function
-import pickle
+
 import os.path
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseDownload
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
-import requests
+import pickle
 
 import pandas as pd
+from google.auth.transport.requests import Request
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
 
 # Create functions to be used for handling Hakai Metadata
 SCOPES = ['https://www.googleapis.com/auth/drive.readonly']

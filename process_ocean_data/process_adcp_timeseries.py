@@ -1,4 +1,4 @@
-from .tools import google, hakai, process
+from process_ocean_data.tools import google, hakai, process
 
 from pycurrents_ADCP_processing import ADCP_processing_L0, ADCP_processing_L1
 import xarray as xr

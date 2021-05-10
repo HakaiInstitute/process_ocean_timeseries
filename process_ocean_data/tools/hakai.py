@@ -1,18 +1,17 @@
 # from __future__ import print_function
 
-import pandas as pd
-import numpy as np
 import datetime as dt
-from pytz import timezone
-
-import matplotlib.pyplot as plt
 import re
 import warnings
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import utm
+from pytz import timezone
 
-from . import google
 from . import geo
+from . import google
 
 
 def convert_hakai_datetime(date_str):

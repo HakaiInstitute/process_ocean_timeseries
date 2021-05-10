@@ -1,10 +1,9 @@
-import numpy as np
-
 import re
-import requests
 
-from scipy.optimize import minimize
+import numpy as np
+import requests
 from bs4 import BeautifulSoup
+from scipy.optimize import minimize
 
 
 def dms2dd(s):

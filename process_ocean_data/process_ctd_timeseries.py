@@ -1,4 +1,4 @@
-from tools import google, hakai, process
+from process_ocean_data.tools import google, hakai, process
 
 from seabird.cnv import fCNV
 from seabird.netcdf import cnv2nc
