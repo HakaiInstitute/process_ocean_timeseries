@@ -45,7 +45,7 @@ for index, row in df.iterrows():
         c = fCNV(file_output+'.cnv')
 
         # Save to NetCDF
-        print('Save to '+row['file_name']+'.nc')
+        print('Save to '+row['file_name']+'_L0.nc')
         cnv2nc(c, file_output+'_L0.nc')
 
         # Add Metadata to NetCDF
@@ -68,7 +68,6 @@ for index, row in df.iterrows():
         station[0] = row['Site']
 
         # File name (timeseries_id)
-        #
         # TODO this is temporary I would prefer having access to the instrument serial number instead
         file_name = nc.createVariable('file_id', str)
         file_name[0] = row['file_name']

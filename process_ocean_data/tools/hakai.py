@@ -83,14 +83,21 @@ def transform_hakai_log(df, dest_dir):
     # Define file name
     # 'Hakai_[Manufacturer]-[Instrumen Type]_[Instrument Model]-SN[Serial Number]_[Hakai Region]-[Station]_[StartDate: yyyymmdd]{opt: _[End Date]}
     for index, row in df.iterrows():
-        file_name_out = 'Hakai_' + \
-                        row['Instrument Manufacturer'] + '-' + row['Instrument Type'] + '-' + \
-                        row['Instrument Sub Type'] + '-SN' + row['Serial Number'] + '_'\
-                        + row['Region'] + '-' + row['Site'] + '_' + \
-                        row['Deployment Time'].strftime('%Y%m%d')
+        file_name_out = 'Hakai'
+        file_name_out += "_{0}-{1}-{2}-SN{3}".format(
+            row['Instrument Manufacturer'],
+            row['Instrument Type'],
+            row['Instrument Sub Type'],
+            row['Serial Number']
+            )
+        file_name_out += "_{0}-{1}".format(
+            row['Region'],
+            row['Site']
+        )
+        file_name_out += row['Deployment Time'].strftime('_%Y%m%d')
 
         if pd.notnull(row['Retrieval Time']):
-            file_name_out = file_name_out + '-' + row['Retrieval Time'].strftime('%Y%m%d')
+            file_name_out += row['Retrieval Time'].strftime('-%Y%m%d')
 
         sub_path = row['Region'] + '/' + row['Site'] + '/'
 

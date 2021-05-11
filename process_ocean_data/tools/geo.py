@@ -11,7 +11,7 @@ def dms2dd(s):
     Convert latitude/longitude in string format to decimal degrees with Positive towards north/east.
     """
     # example: s = """0°51'56.29"S"""
-    if s is None or len(s) <= 1:
+    if s in [None, np.nan] or len(s) <= 1:
         dd = np.nan
     else:
         # Split String into components
