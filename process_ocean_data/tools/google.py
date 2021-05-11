@@ -1,76 +1,82 @@
+"""
+Module use to download data from Google Sheet and Files from Google drive links.
+"""
 
 from __future__ import print_function
 
-import os.path
-import pickle
+import requests
+import io
+
+from tqdm import tqdm
 
 import pandas as pd
-from google.auth.transport.requests import Request
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseDownload
-
-# Create functions to be used for handling Hakai Metadata
-SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
-# Google Drive Interaction
 
 
-def get_google_creds():
-    # Get Google Authorizations
-    creds = None
-    # The file token.pickle stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first
-    # time.
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token:
-            creds = pickle.load(token)
-    # If there are no (valid) credentials available, let the user log in.
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
+def get_from_google_public(file_link, path=None, output="csv"):
+    """Simple method to retrieve data from a public google link"""
+    if file_link is None:
+        return
+    elif "spreadsheets" in file_link:
+        # Modify file link to retrieve the csv format
+        output_extension = "export?format={0}".format(output)
+        file_id = file_link.rsplit("/edit", 1)
+        if len(file_id) < 2:
+            raise RuntimeError("Can" "t recognize the provided link")
+
+        response_spreadsheet = requests.get(
+            "{0}/{1}".format(file_id[0], output_extension)
+        )
+        if output == "csv":
+            csv_data = io.StringIO(response_spreadsheet.content.decode("utf-8"))
+            return pd.read_csv(csv_data)
+
+        elif output == "xlsx":
+            raise RuntimeError("not compatible yet with this format")
+
+    elif "drive" in file_link:
+
+        def download_file_from_google_drive(google_id, destination):
+            """Download file from Google Drive with a Public ID"""
+            URL = "https://docs.google.com/uc?export=download"
+
+            session = requests.Session()
+
+            response = session.get(URL, params={"id": google_id}, stream=True)
+            token = get_confirm_token(response)
+
+            if token:
+                params = {"id": google_id, "confirm": token}
+                response = session.get(URL, params=params, stream=True)
+
+            save_response_content(response, destination)
+
+        def get_confirm_token(response):
+            """Confirm file is available"""
+            for key, value in response.cookies.items():
+                if key.startswith("download_warning"):
+                    return value
+
+            return None
+
+        def save_response_content(response, destination):
+            """Method to download file"""
+            CHUNK_SIZE = 32768
+
+            with open(destination, "wb") as f:
+                for chunk in tqdm(
+                    response.iter_content(CHUNK_SIZE),
+                    desc="Download {0}: ".format(destination),
+                    unit="MB",
+                    unit_scale=CHUNK_SIZE / 1024 / 1024,
+                ):
+
+                    if chunk:  # filter out keep-alive new chunks
+                        f.write(chunk)
+
+        if path:
+            link_sections = file_link.rsplit("/", 2)
+
+            if link_sections[-1].startswith("view"):
+                download_file_from_google_drive(link_sections[1], path)
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials_quickstart.json', SCOPES)
-            creds = flow.run_local_server(port=0)
-        # Save the credentials for the next run
-        with open('token.pickle', 'wb') as token:
-            pickle.dump(creds, token)
-    return creds
-
-
-def get_google_sheet(SAMPLE_SPREADSHEET_ID,SAMPLE_RANGE_NAME):
-    # Get Google Authorizations
-    creds = get_google_creds()
-
-    service = build('sheets', 'v4', credentials=creds)
-    
-    # Call the Sheets API
-    sheet = service.spreadsheets()
-    result = sheet.values().get(spreadsheetId=SAMPLE_SPREADSHEET_ID,
-                                range=SAMPLE_RANGE_NAME).execute()
-    values = result.get('values', [])
-    return values
-
-
-def get_google_drive_file(file_id,path):
-    # Get Google Authorization
-    creds = get_google_creds()
-    
-    drive = build('drive', 'v3', credentials=creds)
-   
-    request = drive.files().get_media(fileId=file_id)
-    #fh = io.BytesIO()
-    fh = open(path, "wb")
-    downloader = MediaIoBaseDownload(fh, request)
-    done = False
-    
-    while done is False:
-        status, done = downloader.next_chunk()
-        print("Download %d%%." % int(status.progress() * 100))         
-    return None
-
-
-def convert_google_sheet_to_dataframe(values):
-    # Assume that the first line corresponds to the columns name
-    df = pd.DataFrame(values[1:], columns=values[0][:])
-    return df
+            raise RuntimeError("Please provide a path")

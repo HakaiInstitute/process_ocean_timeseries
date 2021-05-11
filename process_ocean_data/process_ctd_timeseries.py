@@ -16,14 +16,11 @@ from os import path
 dest_dir = r"E:/hakai_CTD/"
 
 # Define Spreadsheet ID
-# Hakai ADCP Deployment log
-# The ID and range of a sample spreadsheet.
-SAMPLE_SPREADSHEET_ID = '1lkI250zOMJIQ0Z3802QbJHM-dF-zqNxc16AcwxaYCM8'
-SAMPLE_RANGE_NAME = 'CTD_log!A:AN'
+# Hakai CTD Deployment log
+INSTRUMENT_LOG_LINK = "https://docs.google.com/spreadsheets/d/1lkI250zOMJIQ0Z3802QbJHM-dF-zqNxc16AcwxaYCM8/edit?usp=sharing"
 
 # Get Hakai ADCP Log data and convert it to a dataframe
-val = google.get_google_sheet(SAMPLE_SPREADSHEET_ID, SAMPLE_RANGE_NAME)
-df = google.convert_google_sheet_to_dataframe(val)
+df = google.get_from_google_public(INSTRUMENT_LOG_LINK)
 
 # Apply transformations to Hakai log
 #  - Convert times to datetime objects in UTC
@@ -36,7 +33,8 @@ df = hakai.transform_hakai_log(df, dest_dir)
 # Download CTD data
 # Create a dictionary with the output file name as key and link to the data as value
 ctd_files = {row['file_name']+'.cnv': row['Link to Raw Data'] for index, row in df.iterrows()}
-hakai.download_on_google_drive(ctd_files, dest_dir)
+for file, link in ctd_files.items():
+    google.get_from_google_public(link, path.join(dest_dir, file))
 
 # Loop through each files
 for index, row in df.iterrows():
