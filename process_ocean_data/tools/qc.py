@@ -154,7 +154,7 @@ def manual_qc_interface(
         print("Completed")
 
     # Setup the interaction between the different components
-    axis_dropdowns = interactive(update_axes, yaxis=yaxis, xaxis=xaxis)
+    axis_dropdowns = interactive(update_axes, yvar=yaxis, xvar=xaxis)
     for item in figure_data:
         item.on_selection(selection_fn)
     apply_flag.on_click(update_flag)
