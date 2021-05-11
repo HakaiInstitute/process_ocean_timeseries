@@ -12,7 +12,8 @@ import json
 from os import path
 
 
-def get_hakai_ctd_log(dest_dir='.'):
+def get_hakai_ctd_log(dest_dir='.',
+                      print_figure=False):
     # Hakai CTD Deployment log
     INSTRUMENT_LOG_LINK = \
         "https://docs.google.com/spreadsheets/d/1lkI250zOMJIQ0Z3802QbJHM-dF-zqNxc16AcwxaYCM8/edit?usp=sharing"
@@ -26,7 +27,7 @@ def get_hakai_ctd_log(dest_dir='.'):
     #  - Convert lat/long to decimal degrees
     #  - Compute trilateration if available
     #  - Generate standard Hakai File Name
-    df = hakai.transform_hakai_log(df, dest_dir)
+    df = hakai.transform_hakai_log(df, dest_dir, print_figure=print_figure)
     return df
 
 
@@ -115,3 +116,4 @@ def process_data(row, dest_dir='.'):
 
     # Upload QARTOD Flags to NetCDF
     qc.save_to_netcdf(l1_file, qartod_results)
+    return {'l0': l0_file, 'l1': l1_file}
