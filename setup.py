@@ -20,7 +20,7 @@ setup(
         "tqdm",
         "pytz",
         "ioos_qc @ git+https://github.com/HakaiInstitute/ioos_qc.git@development",
-        "seabird",
+        "seabird @ git+https://github.com/cioos-siooc/seabird.git@cioos_dev",
         "google-api-python-client",
         "google-auth-httplib2",
         "google-auth-oauthlib",
