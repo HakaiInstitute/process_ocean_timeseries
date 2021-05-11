@@ -36,21 +36,29 @@ def convert_hakai_datetime(date_str):
         else:
             raise RuntimeError('Can''t recognize the timezone: {0}'.format(timezone[0]))
     else:
-        warnings('No timezone information avaiable, we''ll assume UTC.', UserWarning)
+        warnings.warn('No timezone information avaiable, we''ll assume UTC.', UserWarning)
         date = timezone('UTC').localize(date)
 
     return date
 
 
-def transform_hakai_log(df, dest_dir):
-
+def transform_hakai_log(df, dest_dir, print_figure=False, get_mag_dec=False):
+    """
+    The transform_hakai_log function apply the following transformation to the Hakai Log
+    Apply transformations to Hakai log
+     - Convert times to datetime objects in UTC
+     - Retrieve instrument time offset from UTC
+     - Convert lat/long to decimal degrees
+     - Compute trilateration if available
+     - Generate standard Hakai File Name
+     """
     # Convert latitude/longitude string data to decimal
     for col in df.filter(regex='latitude|Latitude|Longitude|longitude').columns:
         if df[col].dtypes == object:
             df[col] = df[col].apply(geo.dms2dd)
 
     # Convert time columns to datetime objects and Convert PST to local Vancouver time
-    df = df.replace({'-': None, 'NaT': None, pd.NA: None}).replace({'^\s*$': None}, regex=True)
+    df = df.replace({'-': None, 'NaT': None, pd.NA: None}).replace({"^\s*$": None}, regex=True)
     time_columns = df.filter(regex='Time|Clock').columns
 
     for col in time_columns:
@@ -71,13 +79,15 @@ def transform_hakai_log(df, dest_dir):
         df[col] = df[col].dt.tz_convert(timezone('UTC'))
 
     # Get Magnetic Declination from NRCAN
-    for index, row in df.iterrows():
-        start_time = row['Deployment Time']
+    if get_mag_dec:
+        print('Get Magnetic Declination Values from NRCAN')
+        for index, row in df.iterrows():
+            start_time = row['Deployment Time']
 
-        df.at[index, 'Magnetic Declination'], df.at[index, 'Yearly Magnetic Drift'] = \
-            geo.get_mag_dec_from_nrcan(start_time,
-                                       row['Instrument Deployment Latitude'],
-                                       row['Instrument Deployment Longitude'])
+            df.at[index, 'Magnetic Declination'], df.at[index, 'Yearly Magnetic Drift'] = \
+                geo.get_mag_dec_from_nrcan(start_time,
+                                           row['Instrument Deployment Latitude'],
+                                           row['Instrument Deployment Longitude'])
     # TODO Maybe add something to the history than mentions where come from the magnetic declination
 
     # Define file name
@@ -89,7 +99,7 @@ def transform_hakai_log(df, dest_dir):
             row['Instrument Type'],
             row['Instrument Sub Type'],
             row['Serial Number']
-            )
+        )
         file_name_out += "_{0}-{1}".format(
             row['Region'],
             row['Site']
@@ -105,6 +115,7 @@ def transform_hakai_log(df, dest_dir):
         df.at[index, 'file_name'] = file_name_out
 
     # Get trilateration results
+    print("Triangulate deployment location")
     for index, dd in df.iterrows():
         if pd.notnull(dd['Latitude:Triangulation1']):
             lat_loc = []
@@ -121,29 +132,36 @@ def transform_hakai_log(df, dest_dir):
             # Apply triangulation
             utm_triang = geo.trilateration_from_utm(np.array(site_range),
                                                     np.array([[utm_loc[0][ii], utm_loc[1][ii]]
-                                                                for ii in range(len(lat_loc))]))
+                                                              for ii in range(len(lat_loc))]))
             # Convert back to lat/long coordinates
             ll_triang = utm.to_latlon(utm_triang[0], utm_triang[1], utm_loc[2], utm_loc[3])
-
-            # Make a figure of the result
-            fig, ax = plt.subplots(figsize=[10, 10])
-            for pos in range(len(utm_loc[1])):
-                plt.scatter(utm_loc[1][pos], utm_loc[0][pos], color='b')
-                cc = plt.Circle([utm_loc[1][pos], utm_loc[0][pos]], site_range[pos], alpha=0.1, edgecolor='k')
-                ax.add_artist(cc)
-            plt.scatter(utm_triang[1], utm_triang[0], color='r')
-            ax.set_aspect('equal')
-            plt.xlabel('East UTM [m]')
-            plt.ylabel('North UTM [m]')
-            plt.title(dd['file_name'])
 
             # Save to DataFrame the results
             df.at[index, 'Latitude:Triangulation_Results'] = ll_triang[0]
             df.at[index, 'Longitude:Triangulation_Results'] = ll_triang[1]
 
-            # Output Figure for future reference
-            plt.savefig(dest_dir + dd['file_name'] + '_triangulation.png', facecolor='w',
-                        format='png')
+            # Make a figure of the result
+            if print_figure:
+                print("Generate Figure")
+                fig, ax = plt.subplots(figsize=[10, 10])
+                for pos in range(len(utm_loc[1])):
+                    plt.scatter(utm_loc[1][pos], utm_loc[0][pos],
+                                color='b')
+                    cc = plt.Circle((utm_loc[1][pos], utm_loc[0][pos]),
+                                    site_range[pos],
+                                    alpha=0.1,
+                                    edgecolor='k')
+                    ax.add_artist(cc)
+                plt.scatter(utm_triang[1], utm_triang[0],
+                            color='r')
+                ax.set_aspect('equal')
+                plt.xlabel('East UTM [m]')
+                plt.ylabel('North UTM [m]')
+                plt.title(dd['file_name'])
+
+                # Output Figure for future reference
+                fig.savefig(dest_dir + dd['file_name'] + '_triangulation.png', facecolor='w',
+                            format='png')
 
     # Create a position field which is the triangulation position
     # if available otherwise it would be the deployment location
@@ -214,8 +232,6 @@ def download_on_google_drive(file_dict, dest_dir):
         if value:
             print('Download ' + key)
             google_file_id = re.split('id=|file/d/|/view', value)[1]
-            print('Google file_id='+google_file_id)
+            print('Google file_id=' + google_file_id)
             google.get_google_drive_file(google_file_id, dest_dir + key)
             # TODO make to download tool compatible with not just google drive
-
-
