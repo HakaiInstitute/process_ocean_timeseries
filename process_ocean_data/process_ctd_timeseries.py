@@ -34,10 +34,10 @@ def download_raw_data(df, dest_dir='.'):
     # Download Raw Data From link and add path to instrument log
     df['raw_file_path'] = ''
     for index, row in df.iterrows():
-        row['raw_file_path'] = path.join(dest_dir, row['file_name']+'.cnv')
+        df.loc[index, 'raw_file_path'] = path.join(dest_dir, row['file_name']+'.cnv')
         google.get_from_google_public(
             row['Link to Raw Data'],
-            row['raw_file_path']
+            df.loc[index, 'raw_file_path']
         )
     return df
 
