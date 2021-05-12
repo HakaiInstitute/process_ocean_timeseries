@@ -54,29 +54,21 @@
             "threshold": 0.01},
         "spike_test": {
             "suspect_threshold": 0.2,
-            "fail_threshold": 1},
+            "fail_threshold": 1,
+            "method": "differential"
+            },
         "aggregate": {}
     }
 },
 "PSALST01": {
     "qartod": {
         "gross_range_test": {
-            "suspect_span": [5, 40],
+            "suspect_span": [0, 40],
             "fail_span": [0, 50]},
-        "flat_line_test": {
-            "tolerance": 0.001,
-            "suspect_threshold": 10800,
-            "fail_threshold": 21600},
-        "rate_of_change_test": {
-            "threshold": 0.01},
         "spike_test": {
             "suspect_threshold": 0.2,
             "fail_threshold": 0.5,
-            "method": "differential",
-            "n_dev_suspect":0.5,
-            "n_dev_fail":4,
-            "n_records":500,
-            "min_records":200},
+            "method": "differential"},
         "aggregate": {}
     }
 },
