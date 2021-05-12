@@ -1,4 +1,4 @@
-from process_ocean_data.tools import google, hakai, process
+from .tools import google, hakai, process
 
 from seabird.cnv import fCNV
 from seabird.netcdf import cnv2nc
@@ -101,27 +101,24 @@ def process_data(row, dest_dir='.', config=None):
                                                  figure_path=file_output + '_crop.png')
 
     # Output Cropped time series a L1
-    ds.loc[dict(time=slice(start_end_results['first_good_record_time'],
-                           start_end_results['last_good_record_time']))]\
-        .to_netcdf(l1_file)
-
+    ds = ds.loc[dict(time=slice(start_end_results['first_good_record_time'],
+                           start_end_results['last_good_record_time']))]
+    ds.to_netcdf(l1_file)
     # Run QARTOD on the NetCDF file
     # Retrieve Hakai QARTOD Tests
     if not config:
         config = get_ctd_qc_config()
 
     # Use deprecated NcQcConfig
-    # qc = NcQcConfig(config, tinp='time')
-    # qartod_results = qc.run(l1_file)
-    # qartod_results = qc.run(l1_file)
-    # Use the more basic QcConfig method (also deprecated)
+    qc = NcQcConfig(config, tinp='time')
+    qartod_results = qc.run(l1_file)
 
     # Upload QARTOD Flags to NetCDF
-    # qc.save_to_netcdf(l1_file, qartod_results)
+    qc.save_to_netcdf(l1_file, qartod_results)
 
     # Move away from the NcQcConfig method temporary (hopefully we'll use the streams method soon.
-    ds = process.run_qartod(ds, config)
-    ds.to_netcdf(l1_file)
+    # ds = process.run_qartod(ds, config)
+    # ds.to_netcdf(l1_file)
     return {'l0': l0_file, 'l1': l1_file}
 
 

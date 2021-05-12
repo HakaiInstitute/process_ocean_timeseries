@@ -1,2 +1,2 @@
-import process_ocean_data.process_ctd_timeseries
-from process_ocean_data import tools
+from .tools import qc, process, hakai, google, geo
+from . import process_ctd_timeseries

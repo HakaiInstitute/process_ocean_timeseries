@@ -6,7 +6,7 @@ from ipywidgets import interactive, HBox, VBox, widgets
 
 
 def manual_qc_interface(
-    df, variable_list: list, flags: dict, review_flag: str = "_manual_flag"
+    df, variable_list: list, flags: dict, review_flag: str = "_review_flag"
 ):
     """
     Manually QC interface to manually QC oceanographic data, through a Jupyter notebook.
@@ -16,9 +16,10 @@ def manual_qc_interface(
     :param review_flag:
     """
 
-    table_columns = list(df.filter(like="qartod_aggregate").columns)
+    # Identify variables to present in table (qc data and associated values)
+    table_flag_columns = list(df.filter(regex="qartod|season|review").columns)
     table_index = ["time"]
-    table_columns = table_index + table_columns
+    table_columns = table_index + table_flag_columns
 
     # Set Widgets of the interface
     yaxis = widgets.Dropdown(
@@ -82,7 +83,7 @@ def manual_qc_interface(
             )
         ]
     )
-    t.update_layout(margin=dict(l=20, r=20, t=40, b=20))
+    # t.update_layout(margin=dict(l=20, r=20, t=40, b=20))
 
     # Set the update to figure if the drop menu is changed
     figure_data = f.data
