@@ -167,4 +167,4 @@ def manual_qc_interface(
     accordion.selected_index = None
 
     # Show me
-    VBox((VBox((plot_interface, flag_interface)), f, accordion))
+    return VBox((VBox((plot_interface, flag_interface)), f, accordion))
