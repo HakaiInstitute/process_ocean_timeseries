@@ -21,13 +21,11 @@ setup(
         "pytz",
         "ioos_qc @ git+https://github.com/HakaiInstitute/ioos_qc.git@development",
         "seabird @ git+https://github.com/cioos-siooc/seabird.git@cioos_dev",
-        "google-api-python-client",
-        "google-auth-httplib2",
-        "google-auth-oauthlib",
         "utm",
         "beautifulsoup4",
         "scipy",
-        "matplotlib", 'plotly', 'ipywidgets'
+        "matplotlib", 'plotly', 'ipywidgets',
+        "NetCDF4"
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
