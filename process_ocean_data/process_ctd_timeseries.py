@@ -43,7 +43,7 @@ def download_raw_data(df, dest_dir='.'):
     return df
 
 
-def process_data(row, dest_dir='.'):
+def process_data(row, dest_dir='.', config=None):
     """ Apply standard processing method and QAQC to the CTD time series."""
     if row['Link to Raw Data'] is None:
         return
@@ -107,13 +107,27 @@ def process_data(row, dest_dir='.'):
 
     # Run QARTOD on the NetCDF file
     # Retrieve Hakai QARTOD Tests
+    if not config:
+        config = get_ctd_qc_config()
+
+    # Use deprecated NcQcConfig
+    # qc = NcQcConfig(config, tinp='time')
+    # qartod_results = qc.run(l1_file)
+    # qartod_results = qc.run(l1_file)
+    # Use the more basic QcConfig method (also deprecated)
+
+    # Upload QARTOD Flags to NetCDF
+    # qc.save_to_netcdf(l1_file, qartod_results)
+
+    # Move away from the NcQcConfig method temporary (hopefully we'll use the streams method soon.
+    ds = process.run_qartod(ds, config)
+    ds.to_netcdf(l1_file)
+    return {'l0': l0_file, 'l1': l1_file}
+
+
+def get_ctd_qc_config():
     ctd_qc_config = path.join(path.dirname(__file__), 'qc_config/seabird_ctd_time_series.json')
     with open(ctd_qc_config) as f:
         config = json.load(f)
 
-    qc = NcQcConfig(config, tinp='time')
-    qartod_results = qc.run(l1_file)
-
-    # Upload QARTOD Flags to NetCDF
-    qc.save_to_netcdf(l1_file, qartod_results)
-    return {'l0': l0_file, 'l1': l1_file}
+    return config

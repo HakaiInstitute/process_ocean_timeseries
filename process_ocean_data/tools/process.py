@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from ioos_qc.config import QcConfig
 
 def detect_start_end(ds, time_variable, pressure_variable,
                      good_data_mask=None,
@@ -87,3 +88,26 @@ def update_flag(ds, var, mask, true_flag=None, false_flag=None, history=''):
     # TODO Missing the history attribute contribution
     # Could be at the variable or global level
     return ds
+
+
+def run_qartod(df, config, time='time', depth='depth'):
+    # Run QARTOD tests
+    # We are using the deprecated QcConfig method and hopefully will move
+    #  to a new stream method soon.
+
+    # TODO this is a deprecated method and we should move on the Stream method in the near future.
+    for var in config.keys():
+        qc = QcConfig(config[var])
+        qc_result = qc.run(
+            inp=df[var],
+            tinp=df[time],
+            zinp=df[depth],
+        )
+        for module, tests in qc_result.items():
+            for test, flag in tests.items():
+                flag_name = var + '_' + module + "_" + test
+                if type(df) is xr.Dataset:
+                    df[flag_name] = (df[var].dims, flag)
+                else:
+                    df.loc[flag_name] = flag
+    return df
