@@ -4,6 +4,178 @@ QC Module present a set of tools to manually qc data.
 import plotly.graph_objects as go
 from ipywidgets import interactive, HBox, VBox, widgets
 
+flag_conventions = {
+    "QARTOD": {
+        "GOOD": {
+            "Name": "GOOD",
+            "Description": "Data have passed critical real-time quality control tests and are deemed "
+            "adequate for use as preliminary data.",
+            "Value": 1,
+            "Color": "#2ECC40",
+        },
+        "UNKNOWN": {
+            "Name": "UNKNOWN",
+            "Description": "Data have not been QC-tested, or the information on quality is not available.",
+            "Value": 2,
+            "Color": "#FFDC00",
+        },
+        "SUSPECT": {
+            "Name": "SUSPECT",
+            "Description": "Data are considered to be either suspect or of high interest to data providers and users. "
+            "They are flagged suspect to draw further attention to them by operators.",
+            "Value": 3,
+            "Color": "#FF851B",
+        },
+        "FAIL": {
+            "Name": "FAIL",
+            "Description": "Data are considered to have failed one or more critical real-time QC checks. "
+            "If they are disseminated at all, it should be readily apparent that they "
+            "are not of acceptable quality.",
+            "Value": 4,
+            "Color": "#FF4136",
+        },
+        "MISSING": {
+            "Name": "MISSING",
+            "Description": "Data are missing; used as a placeholder.",
+            "Value": 9,
+            "Color": "#85144b",
+        },
+    },
+    "HAKAI": {
+        "ADL": {
+            "Description": "Value was above the established detection limit of the sensor",
+            "Name": "Above detection limit",
+            "Value": "ADL",
+            "Color": "#2ECC40",
+        },
+        "AR": {
+            "Description": "Value above a specified upper limit",
+            "Name": "Above range",
+            "Value": "AR",
+            "Color": "#2ECC40",
+        },
+        "AV": {
+            "Description": "Has been reviewed and looks good",
+            "Name": "Accepted value",
+            "Value": "AV",
+            "Color": "#2ECC40",
+        },
+        "BDL": {
+            "Description": "Value was below the established detection limit of the sensor",
+            "Name": "Below detection limit",
+            "Value": "BDL",
+            "Color": "#2ECC40",
+        },
+        "BR": {
+            "Description": "Value below a specified lower limit",
+            "Name": "Below range",
+            "Value": "BR",
+            "Color": "#2ECC40",
+        },
+        "CD": {
+            "Description": "Sensor needs to be sent back to the manufacturer for calibration",
+            "Name": "Calibration due",
+            "Value": "CD",
+            "Color": "#2ECC40",
+        },
+        "CE": {
+            "Description": "Value was collected with a sensor that is past due for calibration",
+            "Name": "Calibration expired",
+            "Value": "CE",
+            "Color": "#2ECC40",
+        },
+        "EV": {
+            "Description": "Value has been estimated",
+            "Name": "Estimated value",
+            "Value": "EV",
+            "Color": "#2ECC40",
+        },
+        "IC": {
+            "Description": "One or more non‐sequential date/time values",
+            "Name": "Invalid chronology",
+            "Value": "IC",
+            "Color": "#2ECC40",
+        },
+        "II": {
+            "Description": "Value was inconsistent with another related measurement",
+            "Name": "Internal inconsistency",
+            "Value": "II",
+            "Color": "#2ECC40",
+        },
+        "LB": {
+            "Description": "Sensor battery dropped below a threshold",
+            "Name": "Low battery",
+            "Value": "LB",
+            "Color": "#2ECC40",
+        },
+        "MV": {
+            "Description": "No measured value available because of equipment failure, etc.",
+            "Name": "Missing value",
+            "Value": "MV",
+            "Color": "#FFDC00",
+        },
+        "PV": {
+            "Description": "Repeated value for an extended period",
+            "Name": "Persistent value",
+            "Value": "PV",
+            "Color": "#2ECC40",
+        },
+        "SE": {
+            "Description": "Value much greater than the previous value, resulting in an unrealistic slope",
+            "Name": "Slope exceedance",
+            "Value": "SE",
+            "Color": "#2ECC40",
+        },
+        "SI": {
+            "Description": "Value greatly differed from values collected from nearby sensors",
+            "Name": "Spatial inconsistency",
+            "Value": "SI",
+            "Color": "#2ECC40",
+        },
+        "SVC": {
+            "Description": "Value appears to be suspect, use with caution",
+            "Name": "Suspicious value - caution",
+            "Value": "SVC",
+            "Color": "#FF851B",
+        },
+        "SVD": {
+            "Description": "Value is clearly suspect, recommend discarding",
+            "Name": "Suspicious value - reject",
+            "Value": "SVD",
+            "Color": "#FF4136",
+        },
+        "NaN": {
+            "Description": "No value available",
+            "Name": "Not available",
+            "Value": "NaN",
+            "Color": "#85144b",
+        },
+    },
+    "priority": {
+        "HAKAI": [
+            "NaN",
+            "MV",
+            "AV",
+            "CD",
+            "CE",
+            "IC",
+            "LB",
+            "ADL",
+            "AD",
+            "BDL",
+            "EV",
+            "BR",
+            "II",
+            "SI",
+            "SE",
+            "PV",
+            "SVC",
+            "SVD",
+        ],
+        "QARTOD": [9, 2, 1, 3, 4],
+    },
+    "mapping": {"QARTOD-HAKAI": {1: "AV", 2: "MV", 3: "SVC", 4: "SVD", 9: "NaN"}},
+}
 
 def manual_qc_interface(
     df, variable_list: list, flags: dict, review_flag: str = "_review_flag"
