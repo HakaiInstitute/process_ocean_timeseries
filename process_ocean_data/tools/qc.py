@@ -3,6 +3,7 @@ QC Module present a set of tools to manually qc data.
 """
 import plotly.graph_objects as go
 from ipywidgets import interactive, HBox, VBox, widgets
+from IPython.display import display
 
 flag_conventions = {
     "QARTOD": {
@@ -177,21 +178,46 @@ flag_conventions = {
     "mapping": {"QARTOD-HAKAI": {1: "AV", 2: "MV", 3: "SVC", 4: "SVD", 9: "NaN"}},
 }
 
+
+def compare_flags(flags, convention=None, flag_priority=None):
+    """
+    General method that compare flags from the different flag conventions
+    present in the flag_conventions dictionary by apply the priority list which is ordered from  the
+    least to most prioritized flag.
+
+    """
+    if convention and convention in flag_conventions:
+        flag_priority = flag_conventions["priority"][convention]
+
+    record_flag = None
+    for flag in flag_priority:
+        if flag in flags:
+            record_flag = flag
+    return record_flag
+
+
 def manual_qc_interface(
-    df, variable_list: list, flags: dict, review_flag: str = "_review_flag"
+    df,
+    variable_list: list,
+    flags: dict or str,
+    review_flag: str = "_review_flag",
+    comment_column: str = "_review_comment",
+    default_flag=None,
 ):
     """
     Manually QC interface to manually QC oceanographic data, through a Jupyter notebook.
+    :param default_flag:
+    :param comment_column:
     :param df: DataFrame input to QC
     :param variable_list: Variable List to review
     :param flags: Flag convention used
     :param review_flag:
     """
+    #     # Generate a copy of the provided dataframe which will be use for filtering and plotting data|
+    #     df_temp = df
 
-    # Identify variables to present in table (qc data and associated values)
-    table_flag_columns = list(df.filter(regex="qartod|season|review").columns)
-    table_index = ["time"]
-    table_columns = table_index + table_flag_columns
+    if type(flags) is str:
+        flags = flag_conventions[flags]
 
     # Set Widgets of the interface
     yaxis = widgets.Dropdown(
@@ -202,14 +228,39 @@ def manual_qc_interface(
     )
 
     xaxis = widgets.Dropdown(
-        options=["time", "depth"],
+        options=["depth", "time"],
         value="time",
         description="X Axis:",
         disabled=False,
     )
 
-    flag_selection = widgets.ToggleButtons(
+    filter_by = widgets.Text(
+        value=None,
+        description="Filter by",
+        placeholder="ex: 20<depth<30",
+        disabled=False,
+    )
+
+    filter_by_result = filter_by_result = widgets.HTML(
+        value="{0} records available".format(len(df)),
+    )
+
+    apply_filter = widgets.Button(
+        value=False,
+        description="Apply Filter",
+        disabled=False,
+        button_style="success",  # 'success', 'info', 'warning', 'danger' or ''
+        tooltip="Apply Filter to the full dataset.",
+    )
+
+    flag_selection = widgets.Dropdown(
         options=list(flags.keys()), description="Flag to apply:", disabled=False
+    )
+    flag_comment = widgets.Textarea(
+        value="",
+        placeholder="Add review comment",
+        description="Comment:",
+        disabled=False,
     )
 
     apply_flag = widgets.Button(
@@ -223,6 +274,23 @@ def manual_qc_interface(
     accordion = widgets.Accordion()
     accordion.selected_index = None
 
+    show_selection = widgets.Button(
+        value=False,
+        description="Show Selection",
+        disabled=False,
+        button_style="success",  # 'success', 'info', 'warning', 'danger' or ''
+        tooltip="Present selected records in table.",
+    )
+
+    selected_table = widgets.Output()
+
+    def get_filtered_data(df):
+        """Apply query if available otherwise give back the full dataframe"""
+        try:
+            return df.query(filter_by.value)
+        except ValueError:
+            return df
+
     # Create the initial plots
     # Plot widget with
     def _get_plots():
@@ -230,35 +298,58 @@ def manual_qc_interface(
         within the respective widgets and flags in seperate colors"""
         plots = []
         for flag_name, flag_value in flags.items():
-            df_flag = df.loc[df[yaxis.value + review_flag] == flag_value]
+            if type(flag_value) is dict and "Color" in flag_value:
+                flag_color = flag_value["Color"]
+            else:
+                flag_color = flag_value
+            df_temp = get_filtered_data(df)
+
+            df_flag = df_temp.loc[df_temp[yaxis.value + review_flag] == flag_name]
             plots += [
                 go.Scattergl(
                     x=df_flag[xaxis.value],
                     y=df_flag[yaxis.value],
                     mode="markers",
                     name=flag_name,
+                    marker={"color": flag_color, "opacity": 1},
                 )
             ]
-        return tuple(plots)
 
+        return tuple(plots)
+    # Initialize Figure Widget and layout
     f = go.FigureWidget(data=_get_plots(), layout=go.Layout(barmode="overlay"))
     f.update_layout(margin=dict(l=50, r=20, t=50, b=20))
     f.layout.xaxis.title = xaxis.value
     f.layout.yaxis.title = yaxis.value
-
-    # Create a table FigureWidget that updates on selection from points in the scatter plot of f
-    t = go.FigureWidget(
-        [
-            go.Table(
-                header=dict(values=table_columns),
-                cells=dict(values=[df[col] for col in table_columns]),
-            )
-        ]
+    f.layout.title = "Review"
+    f.update_layout(
+        showlegend=True,
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "xanchor": "right",
+            "x": 1,
+        },
     )
-    # t.update_layout(margin=dict(l=20, r=20, t=40, b=20))
 
     # Set the update to figure if the drop menu is changed
     figure_data = f.data
+
+    def update_filter(query_string=None):
+        """Update filter report below the filter_by cell"""
+        df_temp = get_filtered_data(df)
+
+        if len(df_temp) == 0:
+            # Give a message back saying no match and don't change anything else
+            filter_by_result.value = "<p style='color:red;'>0 records found</p>"
+        else:
+            # Update text back and update plot with selection
+            filter_by_result.value = "{0} records found".format(len(df_temp))
+
+    def update_figure(_):
+        """Update figure with present x and y items in menu"""
+        update_axes(xaxis.value, yaxis.value)
 
     def update_axes(xvar, yvar):
         """
@@ -287,57 +378,103 @@ def manual_qc_interface(
 
     def _get_selected_indexes(xs, ys):
         """Method to retrieve dataframe indexes of the selected x,y records shown on the figure."""
+        df_temp = get_filtered_data(df)
         is_indexes_selected = (
-            df[[xaxis.value, yaxis.value]].apply(tuple, axis=1).isin(tuple(zip(xs, ys)))
+            df_temp[[xaxis.value, yaxis.value]]
+            .apply(tuple, axis=1)
+            .isin(tuple(zip(xs, ys)))
         )
-        return df.index[is_indexes_selected].tolist()
+        return df_temp.index[is_indexes_selected].tolist()
 
-    def selection_fn(trace, points, selector):
+    def selection_fn(_):
         """Method to update the table showing the selected records."""
-        if accordion.selected_index == 0:
-            xs, ys = _get_selected_records()
-            selected_indexes = _get_selected_indexes(xs, ys)
-            if selected_indexes:
-                t.data[0].cells.values = [
-                    df.loc[selected_indexes][col] for col in table_columns
-                ]
+        xs, ys = _get_selected_records()
+        selected_indexes = _get_selected_indexes(xs, ys)
+        if selected_indexes:
+            with selected_table:
+                selected_table.clear_output()
+                display(df.loc[selected_indexes])
 
-    def update_flag(_):
+    def update_flag_in_dataframe(_):
         """Tool triggered  when flag is applied to selected records."""
         # Retrieve selected records and flag column
         xs, ys = _get_selected_records()
         selected_indexes = _get_selected_indexes(xs, ys)
         flag_name = yaxis.value + review_flag
+        comment_name = yaxis.value + comment_column
 
         # Create a column for the manual flag if it doesn't exist
         if flag_name not in df:
-            df[flag_name] = flags["UNKNOWN"]
-
+            df[flag_name] = default_flag
+        # Print below the interface what's happening
         print(
-            "Apply {0} to {1} records in Flag column".format(
+            "Apply {0} to {1} records to {2}".format(
                 flag_selection.value, len(selected_indexes), flag_name
             ),
-            end="...",
+            end="",
         )
-        # Update flag value within the dataframe
-        df.loc[selected_indexes, flag_name] = flags[flag_selection.value]
+        if flag_comment.value:
+            print(" and add comment: {0}".format(flag_comment.value), end="")
+        print(" ... ", end="")
+
+        # Update flag value within the data frame
+        df.loc[selected_indexes, flag_name] = flag_selection.value
+
+        # Update comment
+        if flag_comment.value:
+            df.loc[selected_indexes, comment_name] = flag_comment.value
 
         # Update figure with the new flags
-        update_axes(xaxis.value, yaxis.value)
+        update_figure(True)
         print("Completed")
 
     # Setup the interaction between the different components
     axis_dropdowns = interactive(update_axes, yvar=yaxis, xvar=xaxis)
-    for item in figure_data:
-        item.on_selection(selection_fn)
-    apply_flag.on_click(update_flag)
+    show_selection.on_click(selection_fn)
+    apply_filter.on_click(update_figure)
+    apply_flag.on_click(update_flag_in_dataframe)
+    filter_data = interactive(update_filter, query_string=filter_by)
 
-    # Create the interface
-    plot_interface = HBox(axis_dropdowns.children)
-    flag_interface = HBox((flag_selection, apply_flag))
-    accordion.children = [t]
-    accordion.set_title(0, "Selected Records Table")
-    accordion.selected_index = None
+    # Create the interface layout
+    plot_interface = VBox(axis_dropdowns.children)
+    flag_interface = VBox(
+        (flag_selection, flag_comment, apply_flag), layout={"align_items": "flex-end"}
+    )
+    filter_by_interface = VBox(
+        (filter_by, filter_by_result), layout={"align_items": "flex-end"}
+    )
+    filter_interface = HBox((filter_by_interface, apply_filter))
+    upper_menu_left = VBox((plot_interface, filter_interface))
+    upper_menu = HBox(
+        (upper_menu_left, flag_interface), layout={"justify_content": "space-between"}
+    )
+    selection_table = VBox((show_selection, selected_table))
 
-    # Show me
-    return VBox((VBox((plot_interface, flag_interface)), f, accordion))
+    return VBox(
+        (
+            upper_menu,
+            f,
+            selection_table,
+        )
+    )
+
+
+def stack_dataframe_variables(
+    df: "pandas DataFrame",
+    by: list,
+    stack_name: str,
+    result_name: str,
+    keep: list = None,
+):
+    df_to_stack = df.copy()
+    if keep is None:
+        keep = set(df.columns) - by
+
+    # Stack given variables
+    df_stacked = df_to_stack.set_index(keep)[by].stack()
+
+    # Reset indexes and rename the group of stacked values and the resulting stacked column
+    df_stacked.index.names = list(df_stacked.index.names[:-1]) + [stack_name]
+    df_stacked = df_stacked.reset_index()
+    df_stacked.columns = list(df_stacked.columns[:-1]) + [result_name]
+    return df_stacked
