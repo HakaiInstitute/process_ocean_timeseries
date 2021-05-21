@@ -25,7 +25,7 @@ setup(
         "beautifulsoup4",
         "scipy",
         "matplotlib", 'plotly', 'ipywidgets',
-        "NetCDF4"
+        "NetCDF4", 'IPython'
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
