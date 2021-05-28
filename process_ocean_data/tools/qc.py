@@ -65,7 +65,7 @@ flag_conventions = {
             "Description": "Value was below the established detection limit of the sensor",
             "Name": "Below detection limit",
             "Value": "BDL",
-            "Color": "#2ECC40",
+            "Color": "#00ffff",
         },
         "BR": {
             "Description": "Value below a specified lower limit",
