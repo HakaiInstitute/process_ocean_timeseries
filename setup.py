@@ -15,7 +15,6 @@ setup(
         "xarray",
         "requests",
         "pandas",
-        "rpy2",
         "xmltodict",
         "tqdm",
         "pytz",
