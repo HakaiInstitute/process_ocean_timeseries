@@ -72,3 +72,22 @@ def MON(file_path):
             df = df.iloc[: metadata["n_records"]]
 
     return df, metadata
+
+
+def specific_conductivity_to_conductivity(
+        spec_cond,
+        temp,
+        theta=1.91 / 100,
+        temp_ref=25
+):
+    return (100+theta*(temp-temp_ref))/100*spec_cond
+
+
+def conductivity_to_specific_conductivity(
+        cond,
+        temp,
+        theta=1.91 / 100,
+        temp_ref=25
+):
+    return 100/(100+theta*(temp-temp_ref))*cond
+
