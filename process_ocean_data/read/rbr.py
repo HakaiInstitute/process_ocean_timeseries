@@ -23,6 +23,7 @@ def rtext(file_path):
             if re.match(r"\s*.*(=).*", line):
                 key, item = re.split(r"\s*[:=]\s*", line, 1)
 
+                # If line has key[index].subkey format
                 if re.match(r'.*\[\d+\]\..*', key):
                     items = re.search(r'(.*)\[(\d+)\]\.(.*)', key)
                     key = items[1]
@@ -51,3 +52,4 @@ def rtext(file_path):
             raise RuntimeError('Data length do not match expected Number of Samples')
 
         return df, metadata
+

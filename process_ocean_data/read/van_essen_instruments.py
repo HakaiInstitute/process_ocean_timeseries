@@ -15,7 +15,7 @@ def MON(file_path):
     # MON File Header end
     header_end = "[Data]\n"
 
-    with open(file_name) as fid:
+    with open(file_path) as fid:
         line = ""
         section = "header_info"
         metadata = {}
