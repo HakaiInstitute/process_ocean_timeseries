@@ -6,16 +6,18 @@ import re
 header_end = "[Data]\n"
 
 
-def MON(file_path):
+def MON(file_path, encoding='UTF-8', errors='ignore'):
     """
     Read MON file format from Van Essen Instrument format.
+    :param errors: default ignore
+    :param encoding: default UTF-8
     :param file_path: path to file to read
     :return: metadata dictionary dataframe
     """
     # MON File Header end
     header_end = "[Data]\n"
 
-    with open(file_path) as fid:
+    with open(file_path, encoding=encoding, errors=errors) as fid:
         line = ""
         section = "header_info"
         metadata = {}

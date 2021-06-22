@@ -2,16 +2,18 @@ import pandas as pd
 import re
 
 
-def rtext(file_path):
+def rtext(file_path, encoding='UTF-8', errors='ignore'):
     """
     Read RBR R-Text format.
+    :param errors: default ignore
+    :param encoding: default UTF-8
     :param file_path: path to file to read
     :return: metadata dictionary dataframe
     """
     # MON File Header end
     header_end = "NumberOfSamples"
 
-    with open(file_path) as fid:
+    with open(file_path, encoding=encoding, errors=errors) as fid:
         line = ""
         section = "header_info"
         metadata = {section: {}}
