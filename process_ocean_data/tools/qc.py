@@ -200,7 +200,7 @@ def compare_flags(flags, convention=None, flag_priority=None):
 
 
 def manual_qc_interface(
-    data_intput,
+    df,
     variable_list: list,
     flags: dict or str,
     review_flag: str = "_review_flag",
@@ -218,26 +218,6 @@ def manual_qc_interface(
     """
     #     # Generate a copy of the provided dataframe which will be use for filtering and plotting data|
     #     df_temp = df
-
-    # If xarray convert to a dataframe to run the tool
-    if isinstance(data_intput, xr.Dataset):
-        is_xarray_input = True
-        ds = data_intput
-        df = ds.to_dataframe()
-        index_names = df.index.names
-        df = df.reset_index()
-
-        # Add a specific button to update dataset from dataframe
-        update_dataset_button = widgets.Button(
-            value=False,
-            description="Update Dataset Flags",
-            disable=False,
-            button_style="success",
-        )
-    else:
-        is_xarray_input = False
-        update_dataset_button = None
-        df = data_intput
 
     # Retrieve Flag Convention
     if type(flags) is str:
@@ -466,31 +446,17 @@ def manual_qc_interface(
         update_figure(True)
         print("Completed")
 
-    def update_dataset(_):
-        """
-        If xarray dataset provided, a button is added to the interface to update
-        any changes made to flag data back in the xarray dataset.
-        """
-        print("Update Flags: ")
-        for col in df.filter(like=review_flag).columns:
-            print(col, end=": ")
-            temp = ds[col].copy()
-            ds[col] = df[col].set_index(index_names).to_xarray()
-            ds[col].attrs = temp.attrs
-            print("Done")
-
     # Setup the interaction between the different components
     axis_dropdowns = interactive(update_axes, yvar=yaxis, xvar=xaxis)
     show_selection.on_click(selection_fn)
     apply_filter.on_click(update_figure)
     apply_flag.on_click(update_flag_in_dataframe)
     filter_data = interactive(update_filter, query_string=filter_by)
-    update_dataset_button.on_click(update_dataset)
 
     # Create the interface layout
     plot_interface = VBox(axis_dropdowns.children)
     flag_interface = VBox(
-        (flag_selection, flag_comment, apply_flag, update_dataset_button),
+        (flag_selection, flag_comment, apply_flag),
         layout={"align_items": "flex-end"},
     )
     filter_by_interface = VBox(
@@ -503,13 +469,7 @@ def manual_qc_interface(
     )
     selection_table = VBox((show_selection, selected_table))
 
-    # Set output
-    if is_xarray_input:
-        output_data = ds
-    else:
-        output_data = df
-
-    return output_data, VBox(
+    return VBox(
         (
             upper_menu,
             f,
