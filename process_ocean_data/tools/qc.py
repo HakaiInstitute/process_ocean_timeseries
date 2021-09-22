@@ -470,10 +470,13 @@ def manual_qc_interface(
         If xarray dataset provided, a button is added to the interface to update
         any changes made to flag data back in the xarray dataset.
         """
+        print("Update Flags: ")
         for col in df.filter(like=review_flag).columns:
+            print(col, end=": ")
             temp = ds[col].copy()
             ds[col] = df[col].set_index(index_names).to_xarray()
             ds[col].attrs = temp.attrs
+            print("Done")
 
     # Setup the interaction between the different components
     axis_dropdowns = interactive(update_axes, yvar=yaxis, xvar=xaxis)
