@@ -8,27 +8,27 @@ from IPython.display import display
 flag_conventions = {
     "QARTOD": {
         1: {
-            "Name": "GOOD",
+            "Meaning": "GOOD",
             "Description": "Data have passed critical real-time quality control tests and are deemed "
             "adequate for use as preliminary data.",
             "Value": 1,
             "Color": "#2ECC40",
         },
         2: {
-            "Name": "UNKNOWN",
+            "Meaning": "UNKNOWN",
             "Description": "Data have not been QC-tested, or the information on quality is not available.",
             "Value": 2,
             "Color": "#FFDC00",
         },
         3: {
-            "Name": "SUSPECT",
+            "Meaning": "SUSPECT",
             "Description": "Data are considered to be either suspect or of high interest to data providers and users. "
             "They are flagged suspect to draw further attention to them by operators.",
             "Value": 3,
             "Color": "#FF851B",
         },
         4: {
-            "Name": "FAIL",
+            "Meaning": "FAIL",
             "Description": "Data are considered to have failed one or more critical real-time QC checks. "
             "If they are disseminated at all, it should be readily apparent that they "
             "are not of acceptable quality.",
@@ -36,7 +36,7 @@ flag_conventions = {
             "Color": "#FF4136",
         },
         9: {
-            "Name": "MISSING",
+            "Meaning": "MISSING",
             "Description": "Data are missing; used as a placeholder.",
             "Value": 9,
             "Color": "#85144b",
@@ -45,109 +45,109 @@ flag_conventions = {
     "HAKAI": {
         "ADL": {
             "Description": "Value was above the established detection limit of the sensor",
-            "Name": "Above detection limit",
+            "Meaning": "Above detection limit",
             "Value": "ADL",
             "Color": "#2ECC40",
         },
         "AR": {
             "Description": "Value above a specified upper limit",
-            "Name": "Above range",
+            "Meaning": "Above range",
             "Value": "AR",
             "Color": "#2ECC40",
         },
         "AV": {
             "Description": "Has been reviewed and looks good",
-            "Name": "Accepted value",
+            "Meaning": "Accepted value",
             "Value": "AV",
             "Color": "#2ECC40",
         },
         "BDL": {
             "Description": "Value was below the established detection limit of the sensor",
-            "Name": "Below detection limit",
+            "Meaning": "Below detection limit",
             "Value": "BDL",
             "Color": "#00ffff",
         },
         "BR": {
             "Description": "Value below a specified lower limit",
-            "Name": "Below range",
+            "Meaning": "Below range",
             "Value": "BR",
             "Color": "#2ECC40",
         },
         "CD": {
             "Description": "Sensor needs to be sent back to the manufacturer for calibration",
-            "Name": "Calibration due",
+            "Meaning": "Calibration due",
             "Value": "CD",
             "Color": "#2ECC40",
         },
         "CE": {
             "Description": "Value was collected with a sensor that is past due for calibration",
-            "Name": "Calibration expired",
+            "Meaning": "Calibration expired",
             "Value": "CE",
             "Color": "#2ECC40",
         },
         "EV": {
             "Description": "Value has been estimated",
-            "Name": "Estimated value",
+            "Meaning": "Estimated value",
             "Value": "EV",
             "Color": "#2ECC40",
         },
         "IC": {
             "Description": "One or more non‐sequential date/time values",
-            "Name": "Invalid chronology",
+            "Meaning": "Invalid chronology",
             "Value": "IC",
             "Color": "#2ECC40",
         },
         "II": {
             "Description": "Value was inconsistent with another related measurement",
-            "Name": "Internal inconsistency",
+            "Meaning": "Internal inconsistency",
             "Value": "II",
             "Color": "#2ECC40",
         },
         "LB": {
             "Description": "Sensor battery dropped below a threshold",
-            "Name": "Low battery",
+            "Meaning": "Low battery",
             "Value": "LB",
             "Color": "#2ECC40",
         },
         "MV": {
             "Description": "No measured value available because of equipment failure, etc.",
-            "Name": "Missing value",
+            "Meaning": "Missing value",
             "Value": "MV",
             "Color": "#FFDC00",
         },
         "PV": {
             "Description": "Repeated value for an extended period",
-            "Name": "Persistent value",
+            "Meaning": "Persistent value",
             "Value": "PV",
             "Color": "#2ECC40",
         },
         "SE": {
             "Description": "Value much greater than the previous value, resulting in an unrealistic slope",
-            "Name": "Slope exceedance",
+            "Meaning": "Slope exceedance",
             "Value": "SE",
             "Color": "#2ECC40",
         },
         "SI": {
             "Description": "Value greatly differed from values collected from nearby sensors",
-            "Name": "Spatial inconsistency",
+            "Meaning": "Spatial inconsistency",
             "Value": "SI",
             "Color": "#2ECC40",
         },
         "SVC": {
             "Description": "Value appears to be suspect, use with caution",
-            "Name": "Suspicious value - caution",
+            "Meaning": "Suspicious value - caution",
             "Value": "SVC",
             "Color": "#FF851B",
         },
         "SVD": {
             "Description": "Value is clearly suspect, recommend discarding",
-            "Name": "Suspicious value - reject",
+            "Meaning": "Suspicious value - reject",
             "Value": "SVD",
             "Color": "#FF4136",
         },
         "NaN": {
             "Description": "No value available",
-            "Name": "Not available",
+            "Meaning": "Not available",
             "Value": "NaN",
             "Color": "#85144b",
         },
@@ -300,8 +300,11 @@ def manual_qc_interface(
         for flag_name, flag_value in flags.items():
             if type(flag_value) is dict and "Color" in flag_value:
                 flag_color = flag_value["Color"]
+                flag_meaning = flag_value["Meaning"]
             else:
                 flag_color = flag_value
+                flag_meaning = flag_value
+
             df_temp = get_filtered_data(df)
 
             df_flag = df_temp.loc[df_temp[yaxis.value + review_flag] == flag_name]
@@ -310,12 +313,13 @@ def manual_qc_interface(
                     x=df_flag[xaxis.value],
                     y=df_flag[yaxis.value],
                     mode="markers",
-                    name=flag_name,
+                    name=flag_meaning,
                     marker={"color": flag_color, "opacity": 1},
                 )
             ]
 
         return tuple(plots)
+
     # Initialize Figure Widget and layout
     f = go.FigureWidget(data=_get_plots(), layout=go.Layout(barmode="overlay"))
     f.update_layout(margin=dict(l=50, r=20, t=50, b=20))
