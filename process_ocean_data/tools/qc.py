@@ -231,7 +231,7 @@ def manual_qc_interface(
             value=False,
             description="Apply flags to dataset",
             disable=False,
-            button_style="sucess",
+            button_style="success",
         )
     else:
         update_dataset = None
