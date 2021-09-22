@@ -7,27 +7,27 @@ from IPython.display import display
 
 flag_conventions = {
     "QARTOD": {
-        "GOOD": {
+        1: {
             "Name": "GOOD",
             "Description": "Data have passed critical real-time quality control tests and are deemed "
             "adequate for use as preliminary data.",
             "Value": 1,
             "Color": "#2ECC40",
         },
-        "UNKNOWN": {
+        2: {
             "Name": "UNKNOWN",
             "Description": "Data have not been QC-tested, or the information on quality is not available.",
             "Value": 2,
             "Color": "#FFDC00",
         },
-        "SUSPECT": {
+        3: {
             "Name": "SUSPECT",
             "Description": "Data are considered to be either suspect or of high interest to data providers and users. "
             "They are flagged suspect to draw further attention to them by operators.",
             "Value": 3,
             "Color": "#FF851B",
         },
-        "FAIL": {
+        4: {
             "Name": "FAIL",
             "Description": "Data are considered to have failed one or more critical real-time QC checks. "
             "If they are disseminated at all, it should be readily apparent that they "
@@ -35,7 +35,7 @@ flag_conventions = {
             "Value": 4,
             "Color": "#FF4136",
         },
-        "MISSING": {
+        9: {
             "Name": "MISSING",
             "Description": "Data are missing; used as a placeholder.",
             "Value": 9,
