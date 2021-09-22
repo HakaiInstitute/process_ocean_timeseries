@@ -221,9 +221,10 @@ def manual_qc_interface(
 
     # If xarray convert to a dataframe to run the tool
     if isinstance(df, xr.Dataset):
-        input_is_xarray = True
         ds = df
         df = ds.to_dataframe()
+        index_names = df.index.names
+        df = df.reset_index()
 
         # Add a specific button to update dataset from dataframe
         update_dataset_button = widgets.Button(
@@ -233,7 +234,6 @@ def manual_qc_interface(
             button_style="sucess",
         )
     else:
-        input_is_xarray = False
         update_dataset = None
 
     # Retrieve Flag Convention
@@ -459,7 +459,9 @@ def manual_qc_interface(
         any changes made to flag data back in the xarray dataset.
         """
         for col in df.filter(like=review_flag).columns:
-            ds[col] = df[col].to_xarray()
+            temp = ds[col].copy()
+            ds[col] = df[col].set_index(index_names).to_xarray()
+            ds[col].attrs = temp.attrs
 
     # Setup the interaction between the different components
     axis_dropdowns = interactive(update_axes, yvar=yaxis, xvar=xaxis)
