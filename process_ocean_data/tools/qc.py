@@ -221,6 +221,7 @@ def manual_qc_interface(
 
     # If xarray convert to a dataframe to run the tool
     if isinstance(df, xr.Dataset):
+        is_xarray_input = True
         ds = df
         df = ds.to_dataframe()
         index_names = df.index.names
@@ -234,6 +235,7 @@ def manual_qc_interface(
             button_style="success",
         )
     else:
+        is_xarray_input = False
         update_dataset = None
 
     # Retrieve Flag Convention
@@ -500,7 +502,13 @@ def manual_qc_interface(
     )
     selection_table = VBox((show_selection, selected_table))
 
-    return VBox(
+    # Set output
+    if is_xarray_input:
+        output_data = ds
+    else:
+        output_data = df
+
+    return output_data, VBox(
         (
             upper_menu,
             f,
