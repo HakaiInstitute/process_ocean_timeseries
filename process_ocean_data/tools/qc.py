@@ -1,9 +1,12 @@
 """
 QC Module present a set of tools to manually qc data.
 """
+from logging import disable
 import plotly.graph_objects as go
 from ipywidgets import interactive, HBox, VBox, widgets
 from IPython.display import display
+import xarray as xr
+from xarray.core.dataset import Dataset
 
 flag_conventions = {
     "QARTOD": {
@@ -216,6 +219,24 @@ def manual_qc_interface(
     #     # Generate a copy of the provided dataframe which will be use for filtering and plotting data|
     #     df_temp = df
 
+    # If xarray convert to a dataframe to run the tool
+    if isinstance(df, xr.Dataset):
+        input_is_xarray = True
+        ds = df
+        df = ds.to_dataframe()
+
+        # Add a specific button to update dataset from dataframe
+        update_dataset_button = widgets.Button(
+            value=False,
+            description="Apply flags to dataset",
+            disable=False,
+            button_style="sucess",
+        )
+    else:
+        input_is_xarray = False
+        update_dataset = None
+
+    # Retrieve Flag Convention
     if type(flags) is str:
         flags = flag_conventions[flags]
 
@@ -432,17 +453,27 @@ def manual_qc_interface(
         update_figure(True)
         print("Completed")
 
+    def update_dataset(_):
+        """
+        If xarray dataset provided, a button is added to the interface to update
+        any changes made to flag data back in the xarray dataset.
+        """
+        for col in df.filter(like=review_flag).columns:
+            ds[col] = df[col].to_xarray()
+
     # Setup the interaction between the different components
     axis_dropdowns = interactive(update_axes, yvar=yaxis, xvar=xaxis)
     show_selection.on_click(selection_fn)
     apply_filter.on_click(update_figure)
     apply_flag.on_click(update_flag_in_dataframe)
     filter_data = interactive(update_filter, query_string=filter_by)
+    update_dataset_button.on_click(update_dataset)
 
     # Create the interface layout
     plot_interface = VBox(axis_dropdowns.children)
     flag_interface = VBox(
-        (flag_selection, flag_comment, apply_flag), layout={"align_items": "flex-end"}
+        (flag_selection, flag_comment, apply_flag, update_dataset_button),
+        layout={"align_items": "flex-end"},
     )
     filter_by_interface = VBox(
         (filter_by, filter_by_result), layout={"align_items": "flex-end"}
@@ -464,7 +495,7 @@ def manual_qc_interface(
 
 
 def stack_dataframe_variables(
-    df: "pandas DataFrame",
+    df,
     by: list,
     stack_name: str,
     result_name: str,
