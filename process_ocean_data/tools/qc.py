@@ -239,6 +239,18 @@ def manual_qc_interface(
     # Retrieve Flag Convention
     if type(flags) is str:
         flags = flag_conventions[flags]
+        flag_descriptor = print(
+            "\n".join(
+                [
+                    f"{key} = {item['Meaning']}"
+                    for key, item in flag_conventions[flags].items()
+                ]
+            )
+        )
+    else:
+        flag_descriptor = print(
+            "\n".join([f"{key} = {item}" for key, item in flags.items()])
+        )
 
     # Set Widgets of the interface
     yaxis = widgets.Dropdown(
@@ -275,7 +287,7 @@ def manual_qc_interface(
     )
 
     flag_selection = widgets.Dropdown(
-        options=list(flags.keys()), description="Flag to apply:", disabled=False
+        options=list(flags.keys()), description=flag_descriptor, disabled=False
     )
     flag_comment = widgets.Textarea(
         value="",
