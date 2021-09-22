@@ -200,7 +200,7 @@ def compare_flags(flags, convention=None, flag_priority=None):
 
 
 def manual_qc_interface(
-    df,
+    data_intput,
     variable_list: list,
     flags: dict or str,
     review_flag: str = "_review_flag",
@@ -220,9 +220,9 @@ def manual_qc_interface(
     #     df_temp = df
 
     # If xarray convert to a dataframe to run the tool
-    if isinstance(df, xr.Dataset):
+    if isinstance(data_intput, xr.Dataset):
         is_xarray_input = True
-        ds = df
+        ds = data_intput
         df = ds.to_dataframe()
         index_names = df.index.names
         df = df.reset_index()
@@ -236,7 +236,8 @@ def manual_qc_interface(
         )
     else:
         is_xarray_input = False
-        update_dataset = None
+        update_dataset_button = None
+        df = data_intput
 
     # Retrieve Flag Convention
     if type(flags) is str:
