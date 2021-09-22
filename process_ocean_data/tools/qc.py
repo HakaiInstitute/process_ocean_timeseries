@@ -229,7 +229,7 @@ def manual_qc_interface(
         # Add a specific button to update dataset from dataframe
         update_dataset_button = widgets.Button(
             value=False,
-            description="Apply flags to dataset",
+            description="Update Dataset Flags",
             disable=False,
             button_style="success",
         )
