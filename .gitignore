@@ -8,3 +8,4 @@ dist/
 /notebooks/*.csv
 /notebooks/*.cnv
 /notebooks/*.png
+/pycurrents
