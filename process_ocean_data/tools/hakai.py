@@ -76,7 +76,10 @@ def transform_hakai_log(df, dest_dir, print_figure=False, get_mag_dec=False):
 
     # Convert all times to UTC
     for col in time_columns:
-        df[col] = df[col].dt.tz_convert(timezone('UTC'))
+        try:
+            df[col] = df[col].dt.tz_convert(timezone('UTC'))
+        except:
+            df[col] = pd.to_datetime(df[col], utc=True)
 
     # Get Magnetic Declination from NRCAN
     if get_mag_dec:
