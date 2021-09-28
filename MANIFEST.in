@@ -1,2 +1,2 @@
 recursive-include process_ocean_data/qc_config *
-include ios_adcp_processing_metadata_form.csv
+include process_ocean_data/tools/ios_adcp_processing_metadata_form.csv
