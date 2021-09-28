@@ -3,6 +3,7 @@
 import datetime as dt
 import re
 import warnings
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -186,7 +187,8 @@ def hakai_log_to_ios_csv(df, hakai_to_ios_map, dest_dir):
     """
 
     # Load a default ios metadata form
-    df_ios = pd.read_csv('ios_adcp_processing_metadata_form.csv')
+    ios_reference_path = os.path.join(os.path.dirname(__file__),'ios_adcp_processing_metadata_form.csv')
+    df_ios = pd.read_csv(ios_reference_path)
 
     # Distinguish metadata that needs to be retrieved from the Hakai log, the default value or the empty ones
     # from_hakai_log = {} # TODO remove if not needed
