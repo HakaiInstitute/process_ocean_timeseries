@@ -115,13 +115,13 @@ def transform_hakai_log(df, dest_dir, print_figure=False, get_mag_dec=False):
             row["Instrument Sub Type"],
             row["Serial Number"],
         )
-        file_name_out += "_{0}-{1}".format(row["Work Area"], row["Station"])
+        file_name_out += "_{0}-{1}".format(row["Region"], row["Site"])
         file_name_out += row["Deployment Time"].strftime("_%Y%m%d")
 
         if pd.notnull(row["Retrieval Time"]):
             file_name_out += row["Retrieval Time"].strftime("-%Y%m%d")
 
-        sub_path = row["Work Area"] + "/" + row["Station"] + "/"
+        sub_path = row["Region"] + "/" + row["Site"] + "/"
 
         df.at[index, "sub_path"] = sub_path
         df.at[index, "file_name"] = file_name_out
