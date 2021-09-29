@@ -80,15 +80,15 @@ def process_hakai_adcp(raw_file, meta_file, dest_dir):
     df_meta_l1.loc["cut_trail_ensembles", "Value"] = (
         start_end_results["cut_trail_ensembles"] - 1
     )
-    df_meta_l1.loc["instrument_depth"] = start_end_results["instrument_depth"]
+    df_meta_l1.loc["instrument_depth","Value"] = start_end_results["instrument_depth"].values
 
     # Add new fields
-    df_meta_l1["pressure_offset_at_deployment"] = start_end_results[
+    df_meta_l1.loc["pressure_offset_at_deployment","Value"] = start_end_results[
         "pressure_offset_deployment"
-    ]
-    df_meta_l1["pressure_offset_at_retrieval"] = start_end_results[
+    ].values
+    df_meta_l1.loc["pressure_offset_at_retrieval","Value"] = start_end_results[
         "pressure_offset_retrieval"
-    ]
+    ].values
 
     # Save metadata to L1 metadata
     meta_l1 = raw_file[0:-4] + "_meta_L1.csv"
