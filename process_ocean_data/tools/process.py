@@ -26,9 +26,12 @@ def detect_start_end(ds, time_variable, pressure_variable,
     first_good_record_time = ds_cropped[time_variable].min()
     last_good_record_time = ds_cropped[time_variable].max()
 
-    cut_lead_ensembles = int((ds[time_variable] < first_good_record_time.values).argmin().values)
+    cut_lead_ensembles = int(
+        (ds[time_variable] == first_good_record_time.values).argmin().values
+    )
     cut_trail_ensembles = len(ds[time_variable]) - int(
-        (ds[time_variable] > last_good_record_time.values).argmax().values)
+        (ds[time_variable] == last_good_record_time.values).argmax().values
+    )
 
     # Review in air pressure value for offset
     pressure_offset_deployment = xr.where(
