@@ -5,18 +5,23 @@ import xarray as xr
 
 from ioos_qc.config import QcConfig
 
-def detect_start_end(ds, time_variable, pressure_variable,
-                     good_data_mask=None,
-                     pressure_threshold=3,
-                     pressure_difference_threshold=0.3,
-                     time_dim='time',
-                     plot_results=True,
-                     figure_path='detect_deployment_startend.png'):
+
+def detect_start_end(
+    ds,
+    time_variable,
+    pressure_variable,
+    good_data_mask=None,
+    pressure_threshold=3,
+    pressure_difference_threshold=0.3,
+    time_dim="time",
+    plot_results=True,
+    figure_path="detect_deployment_startend.png",
+):
 
     # Create mask of good data
-    is_good_data = (ds[pressure_variable] > pressure_threshold) & \
-                   (abs(ds[pressure_variable].diff(time_dim)) < pressure_difference_threshold) \
-
+    is_good_data = (ds[pressure_variable] > pressure_threshold) & (
+        abs(ds[pressure_variable].diff(time_dim)) < pressure_difference_threshold
+    )
     # Is mask input if given
     if good_data_mask is not None:
         is_good_data = is_good_data & good_data_mask
@@ -35,13 +40,20 @@ def detect_start_end(ds, time_variable, pressure_variable,
 
     # Review in air pressure value for offset
     pressure_offset_deployment = xr.where(
-        (ds[time_variable] < first_good_record_time), ds[pressure_variable], np.nan).median()
+        (ds[time_variable] < first_good_record_time), ds[pressure_variable], np.nan
+    ).median()
 
     pressure_offset_retrieval = xr.where(
-        (ds[time_variable] > last_good_record_time), ds[pressure_variable], np.nan).median()
+        (ds[time_variable] > last_good_record_time), ds[pressure_variable], np.nan
+    ).median()
 
-    print('Pressure Offset [pre, post] = [' + str(pressure_offset_deployment.values) + ', ' + str(
-        pressure_offset_retrieval.values) + ']')
+    print(
+        "Pressure Offset [pre, post] = ["
+        + str(pressure_offset_deployment.values)
+        + ", "
+        + str(pressure_offset_retrieval.values)
+        + "]"
+    )
 
     instrument_depth = ds_cropped[pressure_variable].mean()
 
@@ -49,33 +61,47 @@ def detect_start_end(ds, time_variable, pressure_variable,
         # Show resulting values
         fig, axes = plt.subplots(ncols=2)
 
-        ds[pressure_variable].plot(label='RAW', ax=axes[0])
-        ds_cropped[pressure_variable].plot(label='GOOD', ax=axes[0])
-        axes[0].set_title('Deployment')
-        ds[pressure_variable].plot(label='RAW', ax=axes[1])
-        ds_cropped[pressure_variable].plot(label='GOOD', ax=axes[1])
-        axes[1].set_title('Retrieval')
+        ds[pressure_variable].plot(label="RAW", ax=axes[0])
+        ds_cropped[pressure_variable].plot(label="GOOD", ax=axes[0])
+        axes[0].set_title("Deployment")
+        ds[pressure_variable].plot(label="RAW", ax=axes[1])
+        ds_cropped[pressure_variable].plot(label="GOOD", ax=axes[1])
+        axes[1].set_title("Retrieval")
         axes[1].yaxis.tick_right()
         axes[1].yaxis.set_label_position("right")
 
         # Try to zoom within 1 hour of deployment and retrieval times if possible
 
         time_interval = pd.Timedelta(hours=1)
-        axes[0].set_xlim([first_good_record_time.values - time_interval, first_good_record_time.values + time_interval])
-        axes[1].set_xlim([last_good_record_time.values - time_interval, last_good_record_time.values + time_interval])
+        axes[0].set_xlim(
+            [
+                first_good_record_time.values - time_interval,
+                first_good_record_time.values + time_interval,
+            ]
+        )
+        axes[1].set_xlim(
+            [
+                last_good_record_time.values - time_interval,
+                last_good_record_time.values + time_interval,
+            ]
+        )
 
         axes[0].legend()
         plt.draw()
         plt.savefig(figure_path, dpi=300)
 
-    return {'first_good_record_time': first_good_record_time, 'last_good_record_time': last_good_record_time,
-            'cut_lead_ensembles': cut_lead_ensembles, 'cut_trail_ensembles': cut_trail_ensembles,
-            'pressure_offset_deployment': pressure_offset_deployment,
-            'pressure_offset_retrieval': pressure_offset_retrieval,
-            'instrument_depth': instrument_depth}
+    return {
+        "first_good_record_time": first_good_record_time,
+        "last_good_record_time": last_good_record_time,
+        "cut_lead_ensembles": cut_lead_ensembles,
+        "cut_trail_ensembles": cut_trail_ensembles,
+        "pressure_offset_deployment": pressure_offset_deployment,
+        "pressure_offset_retrieval": pressure_offset_retrieval,
+        "instrument_depth": instrument_depth,
+    }
 
 
-def update_flag(ds, var, mask, true_flag=None, false_flag=None, history=''):
+def update_flag(ds, var, mask, true_flag=None, false_flag=None, history=""):
     # Keep attributes associated to variable
     temp_var = ds[var]
 
@@ -93,7 +119,7 @@ def update_flag(ds, var, mask, true_flag=None, false_flag=None, history=''):
     return ds
 
 
-def run_qartod(df, config, time='time', depth='depth'):
+def run_qartod(df, config, time="time", depth="depth"):
     # Run QARTOD tests
     # We are using the deprecated QcConfig method and hopefully will move
     #  to a new stream method soon.
@@ -108,7 +134,7 @@ def run_qartod(df, config, time='time', depth='depth'):
         )
         for module, tests in qc_result.items():
             for test, flag in tests.items():
-                flag_name = var + '_' + module + "_" + test
+                flag_name = var + "_" + module + "_" + test
                 if type(df) is xr.Dataset:
                     df[flag_name] = (df[var].dims, flag)
                 else:
