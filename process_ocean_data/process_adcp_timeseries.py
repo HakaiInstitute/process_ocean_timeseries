@@ -134,10 +134,10 @@ def process_hakai_adcp(raw_file, meta_file, dest_dir):
 
     # Flag side lobe region from surface data
     side_lobe_coefficient = 1 - np.cos(np.deg2rad(int(ds.attrs["beam_angle"])))
-    side_lobe_depth = ds["PPSAADCP"] * side_lobe_coefficient + ds.attrs["cellSize"] / 2
+    side_lobe_depth = ds["PPSAADCP"] * side_lobe_coefficient + ds.attrs["cellSize"]
     for var in current_flag_variables:
         # Flag BAD any data above side lobe contaminated region
-        ds[var] = ds[var].where((ds["depth"] >= side_lobe_depth), other=4)
+        ds[var] = ds[var].where((ds["depth"] > side_lobe_depth), other=4)
 
         # Flag BAD any data above surface
         ds[var] = ds[var].where(ds["depth"] > 0, other=4)
