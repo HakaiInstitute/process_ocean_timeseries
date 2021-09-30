@@ -80,15 +80,22 @@ def process_hakai_adcp(raw_file, meta_file, dest_dir):
     df_meta_l1.loc["cut_trail_ensembles", "Value"] = (
         start_end_results["cut_trail_ensembles"] - 1
     )
-    df_meta_l1.loc["instrument_depth","Value"] = start_end_results["instrument_depth"].values
+    df_meta_l1.loc["instrument_depth", "Value"] = start_end_results[
+        "instrument_depth"
+    ].values
 
     # Add new fields
-    df_meta_l1.loc["pressure_offset_at_deployment","Value"] = start_end_results[
+    df_meta_l1.loc["pressure_offset_at_deployment", "Value"] = start_end_results[
         "pressure_offset_deployment"
     ].values
-    df_meta_l1.loc["pressure_offset_at_retrieval","Value"] = start_end_results[
+    df_meta_l1.loc["pressure_offset_at_retrieval", "Value"] = start_end_results[
         "pressure_offset_retrieval"
     ].values
+    pressure_offset = []
+    if start_end_results["pressure_offset_deployment"].values:
+        pressure_offset += start_end_results["pressure_offset_deployment"].values
+    if start_end_results["pressure_offset_retrieval"].values:
+        pressure_offset += start_end_results["pressure_offset_retrieval"].values
 
     # Save metadata to L1 metadata
     meta_l1 = raw_file[0:-4] + "_meta_L1.csv"
@@ -103,13 +110,11 @@ def process_hakai_adcp(raw_file, meta_file, dest_dir):
     ds = xr.open_dataset(ncname_L1)
 
     # If deployment is less than a day apply pressure offset
-    if ds["time"][[0, -1]].diff("time").dt.days.values[0] < 1:
-        pressure_offset = np.mean(
-            [
-                df_meta_l1["pressure_offset_at_deployment"],
-                df_meta_l1["pressure_offset_at_retrieval"],
-            ]
-        )
+    if (
+        ds["time"][[0, -1]].diff("time").dt.days.values[0] < 1
+        and len(pressure_offset) > 0
+    ):
+        pressure_offset = np.mean([pressure_offset])
         ds["PPSAADCP"] = ds["PPSAADCP"] - pressure_offset
         ds.attrs[
             "history"
