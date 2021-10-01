@@ -125,6 +125,10 @@ def process_hakai_adcp(raw_file, meta_file, dest_dir):
     ds["depth"].attrs["units"] = "m"
     ds["depth"].attrs["standard_name"] = "depth"
 
+    # If station field exist as a global attribute, generate a station variable
+    if "station" in ds.attrs:
+        ds["station"] = ds.attrs["station"]
+
     # Flag Currents values
     current_flag_variables = ["LCEWAP01_QC", "LCNSAP01_QC", "LRZAAP01_QC"]
 
