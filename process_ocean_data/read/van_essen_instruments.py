@@ -26,34 +26,27 @@ def MON(file_path, encoding='UTF-8', errors='ignore'):
         while not line.startswith(header_end):
             # Read line by line
             line = fid.readline()
-
-            if re.match(r"\[.*\]", line):
-                section = re.search(r"\[(.*)\]", line)[1].replace(" ", "_")
-                if section.startswith("Channel"):
-                    channel_id = section.split("_")[1]
-                else:
-                    channel_id = None
-
-                if channel_id:
-                    section = "Channel"
-
+            if re.match('\[.+\]',line):
+                section = re.search('\[(.+)\]',line)[1]
                 if section not in metadata:
                     metadata[section] = {}
-                if channel_id and channel_id not in metadata[section]:
-                    metadata[section][channel_id] = {}
-
-            elif re.match("^=*$", line):
-                continue
-            elif re.match(r"\s*.*(:|=).*", line):
-                key, item = re.split(r"\s*[:=]\s*", line, 1)
-
-                if channel_id and key not in metadata[section][channel_id]:
-                    metadata[section][channel_id][key.strip()] = item.rstrip()
-                elif channel_id is None:
-                    metadata[section][key.strip()] = item.rstrip()
+            elif re.match('[\w\.\s]+\:\.*',line):
+                info = re.search('(?P<key>[\w\s\.]+)\:\s(?P<value>.+)\n',line)
+                metadata[section][info['key'].strip()] = info['value'].strip()
+            elif re.match('\s*[\w\s]+\s+\=.*',line):
+                info = re.search('\s*(?P<key>[\w\s]+)\s+\=(?P<value>.+)',line)
+                metadata[section][info['key'].strip()] = info['value'].strip()
             else:
-                print(f"Ignored: {line}")
+                continue
+            
+        # Regroup channels 
+        metadata['Channel'] = {}
+        for key,items in metadata.items():
+            if key.startswith('Channel') and key.endswith('from data header'):
+                id = re.search('Channel (\d+) from data header',key)[1]
+                metadata['Channel'][int(id)] = items
 
+        # Define column names
         channel_names = ["time"] + [
             attrs["Identification"] for id, attrs in metadata["Channel"].items()
         ]
@@ -64,14 +57,40 @@ def MON(file_path, encoding='UTF-8', errors='ignore'):
         # Read data
         df = pd.read_csv(fid, names=channel_names, header=None, sep="\s\s+")
 
-        # If there's less data then expected send a warning
-        if len(df) < metadata["n_records"]:
-            assert RuntimeWarning(
-                f'Missing data, expected {metadata["n_records"]} and found only {len(df)}'
+    # If there's less data then expected send a warning
+    if len(df) < metadata["n_records"]:
+        assert RuntimeWarning(
+            f'Missing data, expected {metadata["n_records"]} and found only {len(df)}'
+        )
+    
+    # Remove last line
+    if df.iloc[-1]['time']=='END OF DATA FILE OF DATALOGGER FOR WINDOWS':
+        # Crop the end
+        df = df.iloc[: metadata["n_records"]]
+    
+    # Convert time variable to UTC
+    timezone = re.search('UTC([\-\+]*\d+)',metadata['Series settings']['Instrument number'])[1]+':00'
+    df['time'] + ' ' + timezone
+
+    df = df.rename(columns={
+        '1: CONDUCTIVITY':'CONDUCTIVITY',
+        '2: SPEC.COND.':'SPEC.COND.'
+        }
+    )
+
+    # Add Conductivity if missing
+    if 'CONDUCTIVITY' not in df.columns and 'SPEC.COND.' in df.columns:
+        df['CONDUCTIVITY'] = specific_conductivity_to_conductivity(
+            df['SPEC.COND.'], 
+            df['TEMPERATURE']
             )
-        else:
-            # Crop the end if there's extra, should be just the last line that says the end.
-            df = df.iloc[: metadata["n_records"]]
+
+    # Specific Conductance if missing
+    if 'CONDUCTIVITY' in df.columns and 'SPEC.COND.' not in df.columns:
+        df['SPEC.COND.'] = conductivity_to_specific_conductivity(
+            df['CONDUCTIVITY'], 
+            df['TEMPERATURE']
+            )
 
     return df, metadata
 
