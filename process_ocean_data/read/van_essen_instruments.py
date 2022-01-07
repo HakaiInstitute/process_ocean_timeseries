@@ -70,7 +70,8 @@ def MON(file_path, encoding='UTF-8', errors='ignore'):
     
     # Convert time variable to UTC
     timezone = re.search('UTC([\-\+]*\d+)',metadata['Series settings']['Instrument number'])[1]+':00'
-    df['time'] + ' ' + timezone
+    df['time'] += ' ' + timezone
+    df['time'] = pd.to_datetime(df['time'])
 
     df = df.rename(columns={
         '1: CONDUCTIVITY':'CONDUCTIVITY',

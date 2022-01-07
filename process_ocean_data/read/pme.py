@@ -19,6 +19,9 @@ def minidot_txt(path):
         # Read the data with pandas
         df = pd.read_csv(f)
 
+    df.columns = [col.strip() for col in df.columns]
+    
+    metadata = metadata.groupdict()
     metadata['serial_number'] = serial_number
 
     # Convert time to datetime and include
