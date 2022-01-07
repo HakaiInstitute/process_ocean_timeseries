@@ -20,56 +20,53 @@ def MON(file_path, encoding='UTF-8', errors='ignore'):
     with open(file_path, encoding=encoding, errors=errors) as fid:
         line = ""
         section = "header_info"
-        metadata = {}
-        metadata[section] = {}
-        channel_id = None
+        info = {}
+        info[section] = {}
+
         while not line.startswith(header_end):
             # Read line by line
             line = fid.readline()
             if re.match('\[.+\]',line):
                 section = re.search('\[(.+)\]',line)[1]
-                if section not in metadata:
-                    metadata[section] = {}
-            elif re.match('[\w\.\s]+\:\.*',line):
-                info = re.search('(?P<key>[\w\s\.]+)\:\s(?P<value>.+)\n',line)
-                metadata[section][info['key'].strip()] = info['value'].strip()
-            elif re.match('\s*[\w\s]+\s+\=.*',line):
-                info = re.search('\s*(?P<key>[\w\s]+)\s+\=(?P<value>.+)',line)
-                metadata[section][info['key'].strip()] = info['value'].strip()
+                if section not in info:
+                    info[section] = {}
+            elif re.match('\s*(?P<key>[\w\s]+)(\=|\:)(?P<value>.+)',line):
+                item = re.search('\s*(?P<key>[\w\s]+)(\=|\:)(?P<value>.+)',line)
+                info[section][item['key'].strip()] = item['value'].strip()
             else:
                 continue
             
         # Regroup channels 
-        metadata['Channel'] = {}
-        for key,items in metadata.items():
+        info['Channel'] = {}
+        for key,items in info.items():
             if key.startswith('Channel') and key.endswith('from data header'):
                 id = re.search('Channel (\d+) from data header',key)[1]
-                metadata['Channel'][int(id)] = items
+                info['Channel'][int(id)] = items
 
         # Define column names
         channel_names = ["time"] + [
-            attrs["Identification"] for id, attrs in metadata["Channel"].items()
+            attrs["Identification"] for id, attrs in info["Channel"].items()
         ]
         # Read the rest with pandas
         # Find first how many records exist
-        metadata["n_records"] = int(fid.readline())
+        info["n_records"] = int(fid.readline())
 
         # Read data
         df = pd.read_csv(fid, names=channel_names, header=None, sep="\s\s+")
 
     # If there's less data then expected send a warning
-    if len(df) < metadata["n_records"]:
+    if len(df) < info["n_records"]:
         assert RuntimeWarning(
-            f'Missing data, expected {metadata["n_records"]} and found only {len(df)}'
+            f'Missing data, expected {info["n_records"]} and found only {len(df)}'
         )
     
     # Remove last line
     if df.iloc[-1]['time']=='END OF DATA FILE OF DATALOGGER FOR WINDOWS':
         # Crop the end
-        df = df.iloc[: metadata["n_records"]]
+        df = df.iloc[: info["n_records"]]
     
     # Convert time variable to UTC
-    timezone = re.search('UTC([\-\+]*\d+)',metadata['Series settings']['Instrument number'])[1]+':00'
+    timezone = re.search('UTC([\-\+]*\d+)',info['Series settings']['Instrument number'])[1]+':00'
     df['time'] += ' ' + timezone
     df['time'] = pd.to_datetime(df['time'])
 
@@ -93,6 +90,15 @@ def MON(file_path, encoding='UTF-8', errors='ignore'):
             df['TEMPERATURE']
             )
 
+    # Reformat metadata to CF/ACDD standard
+    metadata = {
+        'instrument_manufacturer': 'Van Essen Instruments',
+        'instrument_type': info['Logger settings']['Instrument type'],
+        'instrument_sn': info['Logger settings']['Serial number'],
+        'time_coverage_resolution':  info['Logger settings']['Sample period'],
+        'original_metadata': info,
+    }
+    
     return df, metadata
 
 
