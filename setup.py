@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name="process_ocean_data",
@@ -8,7 +8,7 @@ setup(
     author="Jessy Barrette",
     author_email="jessy.barrette@hakai.org",
     license="MIT",
-    packages=["process_ocean_data"],
+    packages=find_packages(),
     include_package_data=True,
     install_requires=[
         "numpy",
