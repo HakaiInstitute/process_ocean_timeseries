@@ -13,20 +13,20 @@ def tidbit_csv(path):
     with open(path, "r") as f:
         plot_title = f.readline().replace("\n", "")
         info_line = f.readline().replace("\n", "")
-
+        column_names = [
+            re.split(",|\s*\(", col)[0] for col in info_line[1:-1].split('","')
+        ]
         df = pd.read_csv(
             f,
-            names=[
-                "index",
-                "time",
-                "temperature",
-                "coupler_detached",
-                "coupler_attached",
-                "stopped",
-                "end_of_file",
-            ],
-            index_col="index",
+            names=column_names,
+            usecols=["#", "Date Time", "Temp"],
+            dtype={"#": int, "Date Time": str, "Temp": float},
+            index_col="#",
+            engine="c",
         )
+
+    # Rename the variables
+    df = df.rename(columns={"#": "index", "Date Time": "time", "Temp": "temperature"})
 
     # Parse header lines
     timezone = re.search("Date Time, GMT([\-\+\d\:]*)", info_line)[1]
@@ -64,14 +64,10 @@ def tidbit_csv(path):
         value=metadata["instrument_manufacturer"],
     )
     df.insert(
-        loc=1,
-        column="instrument_model",
-        value=metadata["instrument_model"],
+        loc=1, column="instrument_model", value=metadata["instrument_model"],
     )
     df.insert(
-        loc=2,
-        column="instrument_sn",
-        value=metadata["instrument_sn"],
+        loc=2, column="instrument_sn", value=metadata["instrument_sn"],
     )
     # Add timezone to time variable
     df["time"] = pd.to_datetime(df["time"] + " " + timezone, utc=True)
