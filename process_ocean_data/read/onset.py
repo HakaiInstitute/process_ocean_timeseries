@@ -1,6 +1,10 @@
 import pandas as pd
 import re
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def tidbit_csv(path):
 
@@ -12,27 +16,32 @@ def tidbit_csv(path):
     """
     with open(path, "r") as f:
         plot_title = f.readline().replace("\n", "")
-        info_line = f.readline().replace("\n", "")
-        column_names = [
-            re.split(",|\s*\(", col)[0] for col in info_line[1:-1].split('","')
-        ]
-        df = pd.read_csv(
-            f,
-            names=column_names,
-            usecols=["#", "Date Time", "Temp"],
-            dtype={"#": int, "Date Time": str, "Temp": float},
-            index_col="#",
-            engine="c",
-        )
-
-    # Rename the variables
-    df = df.rename(columns={"#": "index", "Date Time": "time", "Temp": "temperature"})
+        df = pd.read_csv(f, index_col="#")
 
     # Parse header lines
-    timezone = re.search("Date Time, GMT([\-\+\d\:]*)", info_line)[1]
-    logger_serials = re.findall("LGR S\/N\: (\d*)", info_line)
-    sensor_serials = re.findall("SEN S\/N\: (\d*)", info_line)
-    lbl = re.findall("lbl: (\d*)", info_line)
+    timezone = re.search("GMT([\-\+\d\:]*)", df.columns[0])[1]
+    logger_serials = re.findall("LGR S\/N\: (\d*)", ":".join(df.columns))
+    sensor_serials = re.findall("SEN S\/N\: (\d*)", ":".join(df.columns))
+    lbl = re.findall("lbl: (\d*)", ":".join(df.columns))
+
+    # Rename variables
+    columns_info = [
+        re.search(
+            "^(?P<name>[^\,\(]*)(?:\,(?P<units>[^\(]*)){0,1}(?P<ins>\(.*\)){0,1}$",
+            column,
+        )
+        for column in df.columns
+    ]
+    df.columns = [col["name"] for col in columns_info]
+
+    df = df.rename(
+        columns={
+            "#": "index",
+            "Date Time": "time",
+            "Temp": "temperature",
+            "Intensity": "light_intensity",
+        }
+    )
 
     # Generate Metadata dictionary
     metadata = {
@@ -42,7 +51,16 @@ def tidbit_csv(path):
         "instrument_sn": sensor_serials[0],
         "lbl": lbl,
         "plot_title": plot_title,
+        "variables": {col["name"]: col.groupdict() for col in columns_info},
     }
+
+    if (
+        "Temp" in metadata["variables"]
+        and "C" not in metadata["variables"]["Temp"]["units"]
+    ):
+        logger.warning(
+            f"Temperature is not in degre Celsius: {metadata['variables']['Temp']}"
+        )
 
     # Confirm that all the serial numbers are the same
     if (
@@ -64,10 +82,14 @@ def tidbit_csv(path):
         value=metadata["instrument_manufacturer"],
     )
     df.insert(
-        loc=1, column="instrument_model", value=metadata["instrument_model"],
+        loc=1,
+        column="instrument_model",
+        value=metadata["instrument_model"],
     )
     df.insert(
-        loc=2, column="instrument_sn", value=metadata["instrument_sn"],
+        loc=2,
+        column="instrument_sn",
+        value=metadata["instrument_sn"],
     )
     # Add timezone to time variable
     df["time"] = pd.to_datetime(df["time"] + " " + timezone, utc=True)
