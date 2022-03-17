@@ -60,7 +60,8 @@ def tidbit_csv(path):
 
     columns_info = [
         re.search(
-            "^(?P<name>[^\,\(]*)(?:\,(?P<units>[^\(]*)){0,1}(?P<ins>.*){0,1}$", column,
+            "^(?P<name>[^\,\(]*)(?:\,(?P<units>[^\(]*)){0,1}(?P<ins>.*){0,1}$",
+            column,
         )
         for column in df.columns
     ]
@@ -97,16 +98,20 @@ def tidbit_csv(path):
         value=metadata["instrument_manufacturer"],
     )
     df.insert(
-        loc=1, column="instrument_model", value=metadata["instrument_model"],
+        loc=1,
+        column="instrument_model",
+        value=metadata["instrument_model"],
     )
     df.insert(
-        loc=2, column="instrument_sn", value=",".join(metadata["instrument_sn"]),
+        loc=2,
+        column="instrument_sn",
+        value=",".join(metadata["instrument_sn"]),
     )
     # Add timezone to time variable
     if timezone:
         df["time"] = pd.to_datetime(df["time"] + " " + timezone[1], utc=True)
     else:
-        logger.warning('Unknown timezone, we will assume UTC')
+        logger.warning("Unknown timezone, we will assume UTC")
         df["time"] = pd.to_datetime(df["time"], utc=True)
 
     return df, metadata
