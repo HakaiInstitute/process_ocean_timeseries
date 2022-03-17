@@ -2,6 +2,9 @@ import xarray as xr
 import pandas as pd
 import os
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 header_end = "[Data]\n"
 
@@ -41,7 +44,8 @@ def MON(file_path, encoding="UTF-8", errors="ignore"):
         for key, items in info.items():
             if key.startswith("Channel") and key.endswith("from data header"):
                 id = re.search("Channel (\d+) from data header", key)[1]
-                info["Channel"][int(id)] = items
+                info["Channel"][items["Identification"]] = items
+                info["Channel"][items["Identification"]]["id"] = int(id)
 
         # Define column names
         channel_names = ["time"] + [
@@ -83,6 +87,10 @@ def MON(file_path, encoding="UTF-8", errors="ignore"):
     df = df.rename(
         columns={"1: CONDUCTIVITY": "CONDUCTIVITY", "2: SPEC.COND.": "SPEC.COND."}
     )
+    # IF PRESSURE in cm, convert to meter
+    if "PRESSURE" in df.columns and 'cm' in info['Channel']['PRESSURE']['Range']:
+        logger.info('Convert Pressure from cm to m')
+        df["PRESSURE"] = df["PRESSURE"] / 100
 
     # Add Conductivity if missing
     if "CONDUCTIVITY" not in df.columns and "SPEC.COND." in df.columns:
