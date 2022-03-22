@@ -13,7 +13,7 @@ onset_variables_mapping = {
 }
 
 
-def tidbit_csv(path):
+def csv(path, timezone=None, add_instrument_metadata_as_variable=True):
 
     """tidbit_csv parses the Onset Tidbit CSV format into a pandas dataframe
 
@@ -32,11 +32,13 @@ def tidbit_csv(path):
 
     metadata = {
         "instrument_manufacturer": "Onset",
-        "instrument_type": "Tidbit",
-        "instrument_model": "Tidbit",
     }
     # Parse header lines
-    timezone = re.search("GMT\s*([\-\+\d\:]*)", df.filter(like="Date Time").columns[0])
+    if timezone == None:
+        timezone = re.search(
+            "GMT\s*([\-\+\d\:]*)", df.filter(like="Date Time").columns[0]
+        )
+
     if csv_format == "Plot Title":
         metadata.update(
             {
@@ -58,13 +60,23 @@ def tidbit_csv(path):
         if plot_title:
             df.columns = [col.replace(plot_title[1], "").strip() for col in df.columns]
 
-    columns_info = [
-        re.search(
-            "^(?P<name>[^\,\(]*)(?:\,(?P<units>[^\(]*)){0,1}(?P<ins>.*){0,1}$", column,
-        )
-        for column in df.columns
+    # Drop those components from the column names
+    var_names_with_units = [
+        re.sub("\s*\({0,1}(LGR|SEN) S\/N\: .*", "", item) for item in df.columns
     ]
-    df.columns = [col["name"] for col in columns_info]
+    units = [
+        re.split("\,|\(|\)", item)[1].strip() if re.search("\,|\(", item) else None
+        for item in var_names_with_units
+    ]
+    var_names = [re.split("\,|\(|\)", item)[0].strip() for item in var_names_with_units]
+    df.columns = var_names
+
+    # Append variables information to metadata
+    metadata["variables"] = {}
+    for id, var in enumerate(var_names):
+        metadata["variables"].update({var: {"original_name": original_columns[id]}})
+        if units[id]:
+            metadata["variables"][var]["units"] = units[id]
 
     # Rename variables available
     df = df.rename(
@@ -74,14 +86,34 @@ def tidbit_csv(path):
             if key in df.columns
         }
     )
-
-    # Add Variable Columns info
-    metadata["variables"] = {col["name"]: col.groupdict() for col in columns_info}
-
+    # Try to match instrument type based on variables available
+    ignored_variables = [
+        "index",
+        "time",
+        "Button Up",
+        "Button Down",
+        "Host Connected",
+        "End Of File",
+        "Coupler Detached",
+        "Coupler Attached",
+        "Stopped",
+        "Started",
+        "Good Battery",
+        "Bad Battery",
+    ]
+    vars_of_interest = set(var for var in df.columns if var not in ignored_variables)
+    if vars_of_interest == {"temperature", "light_intensity"}:
+        metadata["instrument_model"] = "Pendant"
+    elif vars_of_interest == {"temperature"}:
+        metadata["instrument_model"] = "Tidbit"
+    else:
+        metadata["instrument_model"] = "Unknown"
+        logger.warning(
+            f"Unknown Hobo instrument type with variables: {vars_of_interest}"
+        )
     # Review units
     if "Temp" in metadata["variables"] and (
         "C" not in metadata["variables"]["Temp"]["units"]
-        and "(*C)" not in metadata["variables"]["Temp"]["ins"]
     ):
         logger.warning(
             f"Temperature is not in degre Celsius: {metadata['variables']['Temp']}"
@@ -91,22 +123,27 @@ def tidbit_csv(path):
         logger.warning("Temperature was coverted to degree Celius [(degF-32)/1.8000]")
 
     # Add instrument information to data table
-    df.insert(
-        loc=0,
-        column="instrument_manufacturer",
-        value=metadata["instrument_manufacturer"],
-    )
-    df.insert(
-        loc=1, column="instrument_model", value=metadata["instrument_model"],
-    )
-    df.insert(
-        loc=2, column="instrument_sn", value=",".join(metadata["instrument_sn"]),
-    )
+    if add_instrument_metadata_as_variable:
+        df.insert(
+            loc=0,
+            column="instrument_manufacturer",
+            value=metadata["instrument_manufacturer"],
+        )
+        df.insert(
+            loc=1,
+            column="instrument_model",
+            value=metadata["instrument_model"],
+        )
+        df.insert(
+            loc=2,
+            column="instrument_sn",
+            value=",".join(metadata["instrument_sn"]),
+        )
     # Add timezone to time variable
     if timezone:
         df["time"] = pd.to_datetime(df["time"] + " " + timezone[1], utc=True)
     else:
-        logger.warning('Unknown timezone, we will assume UTC')
+        logger.warning("Unknown timezone, we will assume UTC")
         df["time"] = pd.to_datetime(df["time"], utc=True)
 
     return df, metadata
