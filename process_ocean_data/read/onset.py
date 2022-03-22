@@ -55,10 +55,13 @@ def csv(path, timezone=None, add_instrument_metadata_as_variable=True):
         )
 
     # Rename variables
+    original_columns = df.columns
     if csv_format == "Plot Title":
         plot_title = re.search("Plot Title\: (\w*)\,+", first_line)
         if plot_title:
-            df.columns = [col.replace(plot_title[1], "").strip() for col in df.columns]
+            df.columns = [
+                re.sub(".*" + plot_title[1], "", col).strip() for col in df.columns
+            ]
 
     # Drop those components from the column names
     var_names_with_units = [
