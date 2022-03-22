@@ -12,6 +12,10 @@ onset_variables_mapping = {
     "Specific Conductance": "specific_conductance",
     "Low Range": "conductivity",
     "EOF": "End Of File",
+    "Abs Pres Barom.": "absolute_barometric_pressure",
+    "Abs Pres": "absolute_pressure",
+    "Sensor Depth": "depth",
+    "Turbidity": "turbidity",
 }
 
 
@@ -105,16 +109,17 @@ def csv(path, timezone=None, add_instrument_metadata_as_variable=True):
         "Started",
         "Good Battery",
         "Bad Battery",
+        "",
     ]
     vars_of_interest = set(var for var in df.columns if var not in ignored_variables)
     if vars_of_interest == {"temperature", "light_intensity"}:
-        metadata["instrument_type"] = "Pendant"
+        metadata["instrument_model"] = "Pendant"
     elif vars_of_interest == {"specific_conductance", "temperature", "conductivity"}:
-        metadata["instrument_type"] = "CT"
+        metadata["instrument_model"] = "CT"
     elif vars_of_interest == {"temperature"}:
-        metadata["instrument_type"] = "Tidbit"
+        metadata["instrument_model"] = "Tidbit"
     else:
-        metadata["instrument_type"] = "unknown"
+        metadata["instrument_model"] = "unknown"
         logger.warning(
             f"Unknown Hobo instrument type with variables: {vars_of_interest}"
         )
@@ -137,7 +142,7 @@ def csv(path, timezone=None, add_instrument_metadata_as_variable=True):
             value=metadata["instrument_manufacturer"],
         )
         df.insert(
-            loc=1, column="instrument_type", value=metadata["instrument_type"],
+            loc=1, column="instrument_model", value=metadata["instrument_model"],
         )
         df.insert(
             loc=2, column="instrument_sn", value=",".join(metadata["instrument_sn"]),
