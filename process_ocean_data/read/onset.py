@@ -108,11 +108,11 @@ def csv(path, timezone=None, add_instrument_metadata_as_variable=True):
     ]
     vars_of_interest = set(var for var in df.columns if var not in ignored_variables)
     if vars_of_interest == {"temperature", "light_intensity"}:
-        metadata["instrument_type"] = "pendant"
-    elif vars_of_interest == {"temperature", "conductiviy", "specific_conductance"}:
-        metadata["instrument_type"] = "ct"
+        metadata["instrument_type"] = "Pendant"
+    elif vars_of_interest == {"specific_conductance", "temperature", "conductivity"}:
+        metadata["instrument_type"] = "CT"
     elif vars_of_interest == {"temperature"}:
-        metadata["instrument_type"] = "tidbit"
+        metadata["instrument_type"] = "Tidbit"
     else:
         metadata["instrument_type"] = "unknown"
         logger.warning(
