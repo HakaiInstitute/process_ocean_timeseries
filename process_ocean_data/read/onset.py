@@ -9,6 +9,8 @@ onset_variables_mapping = {
     "Date Time": "time",
     "Temp": "temperature",
     "Intensity": "light_intensity",
+    "Specific Conductance": "specific_conductance",
+    "Low Range": "conductivity",
     "EOF": "End Of File",
 }
 
@@ -106,11 +108,13 @@ def csv(path, timezone=None, add_instrument_metadata_as_variable=True):
     ]
     vars_of_interest = set(var for var in df.columns if var not in ignored_variables)
     if vars_of_interest == {"temperature", "light_intensity"}:
-        metadata["instrument_type"] = "Pendant"
+        metadata["instrument_type"] = "pendant"
+    elif vars_of_interest == {"temperature", "conductiviy", "specific_conductance"}:
+        metadata["instrument_type"] = "ct"
     elif vars_of_interest == {"temperature"}:
-        metadata["instrument_type"] = "Tidbit"
+        metadata["instrument_type"] = "tidbit"
     else:
-        metadata["instrument_type"] = "Unknown"
+        metadata["instrument_type"] = "unknown"
         logger.warning(
             f"Unknown Hobo instrument type with variables: {vars_of_interest}"
         )
