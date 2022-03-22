@@ -106,11 +106,11 @@ def csv(path, timezone=None, add_instrument_metadata_as_variable=True):
     ]
     vars_of_interest = set(var for var in df.columns if var not in ignored_variables)
     if vars_of_interest == {"temperature", "light_intensity"}:
-        metadata["instrument_model"] = "Pendant"
+        metadata["instrument_type"] = "Pendant"
     elif vars_of_interest == {"temperature"}:
-        metadata["instrument_model"] = "Tidbit"
+        metadata["instrument_type"] = "Tidbit"
     else:
-        metadata["instrument_model"] = "Unknown"
+        metadata["instrument_type"] = "Unknown"
         logger.warning(
             f"Unknown Hobo instrument type with variables: {vars_of_interest}"
         )
@@ -133,7 +133,7 @@ def csv(path, timezone=None, add_instrument_metadata_as_variable=True):
             value=metadata["instrument_manufacturer"],
         )
         df.insert(
-            loc=1, column="instrument_model", value=metadata["instrument_model"],
+            loc=1, column="instrument_type", value=metadata["instrument_type"],
         )
         df.insert(
             loc=2, column="instrument_sn", value=",".join(metadata["instrument_sn"]),
