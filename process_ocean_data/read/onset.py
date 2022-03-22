@@ -126,22 +126,17 @@ def csv(path, timezone=None, add_instrument_metadata_as_variable=True):
         logger.warning("Temperature was coverted to degree Celius [(degF-32)/1.8000]")
 
     # Add instrument information to data table
-    if add_instrument_metadata_as_variable:
-        df.insert(
-            loc=0,
-            column="instrument_manufacturer",
-            value=metadata["instrument_manufacturer"],
-        )
-        df.insert(
-            loc=1,
-            column="instrument_model",
-            value=metadata["instrument_model"],
-        )
-        df.insert(
-            loc=2,
-            column="instrument_sn",
-            value=",".join(metadata["instrument_sn"]),
-        )
+    df.insert(
+        loc=0,
+        column="instrument_manufacturer",
+        value=metadata["instrument_manufacturer"],
+    )
+    df.insert(
+        loc=1, column="instrument_model", value=metadata["instrument_model"],
+    )
+    df.insert(
+        loc=2, column="instrument_sn", value=",".join(metadata["instrument_sn"]),
+    )
     # Add timezone to time variable
     if timezone:
         df["time"] = pd.to_datetime(df["time"] + " " + timezone[1], utc=True)
