@@ -16,6 +16,7 @@ onset_variables_mapping = {
     "Abs Pres": "absolute_pressure",
     "Sensor Depth": "depth",
     "Turbidity": "turbidity",
+    "Water Level": "water_level",
 }
 
 
@@ -62,17 +63,20 @@ def csv(path, timezone=None, add_instrument_metadata_as_variable=True):
 
     # Rename variables
     original_columns = df.columns
-    if csv_format == "Plot Title":
-        plot_title = re.search("Plot Title\: (\w*)\,+", first_line)
-        if plot_title:
-            df.columns = [
-                re.sub(".*" + plot_title[1], "", col).strip() for col in df.columns
-            ]
 
     # Drop those components from the column names
     var_names_with_units = [
         re.sub("\s*\({0,1}(LGR|SEN) S\/N\: .*", "", item) for item in df.columns
     ]
+    if csv_format == "Plot Title":
+        plot_title = re.search("Plot Title\: (\w*)\,+", first_line)
+        if plot_title:
+            var_names_with_units = [
+                re.sub("[^\(]*" + plot_title[1], "", col).strip()
+                for col in var_names_with_units
+            ]
+            
+    # Retrieve units from column names
     units = [
         re.split("\,|\(|\)", item)[1].strip() if re.search("\,|\(", item) else None
         for item in var_names_with_units
@@ -116,8 +120,30 @@ def csv(path, timezone=None, add_instrument_metadata_as_variable=True):
         metadata["instrument_model"] = "Pendant"
     elif vars_of_interest == {"specific_conductance", "temperature", "conductivity"}:
         metadata["instrument_model"] = "CT"
+    elif vars_of_interest == {"temperature", "specific_conductance"}:
+        metadata["instrument_model"] = "CT"
     elif vars_of_interest == {"temperature"}:
         metadata["instrument_model"] = "Tidbit"
+    elif vars_of_interest == {"temperature", "depth"}:
+        metadata["instrument_model"] = "PT"
+    elif vars_of_interest == {
+        "temperature",
+        "absolute_barometric_pressure",
+        "absolute_pressure",
+        "depth",
+    }:
+        metadata["instrument_model"] = "WL"
+    elif vars_of_interest == {
+        "temperature",
+        "absolute_barometric_pressure",
+        "absolute_pressure",
+        "water_level",
+    }:
+        metadata["instrument_model"] = "WL"
+    elif vars_of_interest == {"temperature", "absolute_pressure"}:
+        metadata["instrument_model"] = "airPT"
+    elif vars_of_interest == {"absolute_barometric_pressure"}:
+        metadata["instrument_model"] = "airP"
     else:
         metadata["instrument_model"] = "unknown"
         logger.warning(
