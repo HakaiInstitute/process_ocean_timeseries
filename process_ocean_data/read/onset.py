@@ -75,10 +75,12 @@ def csv(path, timezone=None, add_instrument_metadata_as_variable=True):
                 re.sub("[^\(]*" + plot_title[1], "", col).strip()
                 for col in var_names_with_units
             ]
-            
+
     # Retrieve units from column names
     units = [
-        re.split("\,|\(|\)", item)[1].strip() if re.search("\,|\(", item) else None
+        re.split("\,|\(", item.replace(")", "").strip(), "")[-1].strip()
+        if re.search("\,|\(", item)
+        else None
         for item in var_names_with_units
     ]
     var_names = [re.split("\,|\(|\)", item)[0].strip() for item in var_names_with_units]
