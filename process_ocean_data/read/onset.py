@@ -78,7 +78,7 @@ def csv(path, timezone=None, add_instrument_metadata_as_variable=True):
 
     # Retrieve units from column names
     units = [
-        re.split("\,|\(", item.replace(")", "").strip(), "")[-1].strip()
+        re.split("\,|\(", item.replace(")", "").strip())[-1].strip()
         if re.search("\,|\(", item)
         else None
         for item in var_names_with_units
