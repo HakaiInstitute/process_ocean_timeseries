@@ -115,6 +115,7 @@ def csv(path, timezone=None, add_instrument_metadata_as_variable=True):
         "Started",
         "Good Battery",
         "Bad Battery",
+        "Host Connect",
         "",
     ]
     vars_of_interest = set(var for var in df.columns if var not in ignored_variables)
