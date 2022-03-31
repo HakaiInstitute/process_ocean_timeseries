@@ -35,7 +35,7 @@ def csv(path, timezone=None, add_instrument_metadata_as_variable=True):
             # skip second empty line
             csv_format = "Serial Number"
             f.readline()
-        df = pd.read_csv(f, na_values=[" "])
+        df = pd.read_csv(f, na_values=[" "], encoding_errors='ignore')
 
     metadata = {
         "instrument_manufacturer": "Onset",
