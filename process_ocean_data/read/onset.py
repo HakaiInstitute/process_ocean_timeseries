@@ -1,5 +1,6 @@
 import pandas as pd
 import re
+from datetime import datetime
 
 import logging
 
@@ -11,16 +12,24 @@ onset_variables_mapping = {
     "Intensity": "light_intensity",
     "Specific Conductance": "specific_conductance",
     "Low Range": "conductivity",
-    "EOF": "End Of File",
+    "EOF": "end_of_file",
+    "End of File": "end_of_file":
     "Abs Pres Barom.": "absolute_barometric_pressure",
     "Abs Pres": "absolute_pressure",
-    "Sensor Depth": "depth",
+    "Sensor Depth": "instrument_depth",
     "Turbidity": "turbidity",
     "Water Level": "water_level",
 }
 
 
-def csv(path, timezone=None, add_instrument_metadata_as_variable=True):
+def csv(
+    path,
+    output="xarray",
+    timezone=None,
+    convert_units_to_si=True,
+    add_instrument_metadata_as_variable=True,
+    pd_read_csv_kwargs={},
+):
 
     """tidbit_csv parses the Onset Tidbit CSV format into a pandas dataframe
 
@@ -35,38 +44,35 @@ def csv(path, timezone=None, add_instrument_metadata_as_variable=True):
             # skip second empty line
             csv_format = "Serial Number"
             f.readline()
-        df = pd.read_csv(f, na_values=[" "], encoding_errors="ignore")
+        ds = pd.read_csv(f, na_values=[" "], **pd_read_csv_kwargs).to_xarray()
 
-    metadata = {
-        "instrument_manufacturer": "Onset",
-    }
+    ds.attrs = {"instrument_manufacturer": "Onset", "history": ""}
     # Parse header lines
     if timezone == None:
         timezone = re.search(
-            "GMT\s*([\-\+\d\:]*)", df.filter(like="Date Time").columns[0]
+            "GMT\s*([\-\+\d\:]*)", [var for var in ds if "Date Time" in var][0]
         )
 
     if csv_format == "Plot Title":
-        metadata.update(
+        columns = ":".join([var for var in ds])
+        ds.attrs.update(
             {
-                "logger_sn": set(re.findall("LGR S\/N\: (\d*)", ":".join(df.columns))),
-                "instrument_sn": set(
-                    re.findall("SEN S\/N\: (\d*)", ":".join(df.columns))
-                ),
-                "lbl": set(re.findall("lbl: (\d*)", ":".join(df.columns))),
+                "logger_sn": set(re.findall("LGR S\/N\: (\d*)", columns)),
+                "instrument_sn": set(re.findall("SEN S\/N\: (\d*)", columns)),
+                "lbl": set(re.findall("lbl: (\d*)", columns)),
             }
         )
     elif csv_format == "Serial Number":
-        metadata.update(
+        ds.attrs.update(
             {"instrument_sn": set(re.findall("Serial Number\:(\d+)", first_line))}
         )
 
     # Rename variables
-    original_columns = df.columns
+    original_columns = [var for var in ds]
 
     # Drop those components from the column names
     var_names_with_units = [
-        re.sub("\s*\({0,1}(LGR|SEN) S\/N\: .*", "", item) for item in df.columns
+        re.sub("\s*\({0,1}(LGR|SEN) S\/N\: .*", "", item) for item in ds
     ]
     if csv_format == "Plot Title":
         plot_title = re.search("Plot Title\: (\w*)\,+", first_line)
@@ -84,14 +90,12 @@ def csv(path, timezone=None, add_instrument_metadata_as_variable=True):
         for item in var_names_with_units
     ]
     var_names = [re.split("\,|\(|\)", item)[0].strip() for item in var_names_with_units]
-    df.columns = var_names
+    ds = ds.rename(dict(zip(original_columns, var_names)))
 
-    # Append variables information to metadata
-    metadata["variables"] = {}
-    for id, var in enumerate(var_names):
-        metadata["variables"].update({var: {"original_name": original_columns[id]}})
-        if units[id]:
-            metadata["variables"][var]["units"] = units[id]
+    # Add units to the appropriate field
+    for var, units in dict(zip(var_names, units)):
+        if units and "Date Time" not in var:
+            ds[var].attrs["units"] = units
 
     # Rename variables available
     df = df.rename(
@@ -169,23 +173,24 @@ def csv(path, timezone=None, add_instrument_metadata_as_variable=True):
 
     # Add instrument information to data table3
     if add_instrument_metadata_as_variable:
-        df.insert(
-            loc=0,
-            column="instrument_manufacturer",
-            value=metadata["instrument_manufacturer"],
-        )
-        df.insert(
-            loc=1, column="instrument_model", value=metadata["instrument_model"],
-        )
-        df.insert(
-            loc=2, column="instrument_sn", value=",".join(metadata["instrument_sn"]),
-        )
+        ds["instrument_manufacturer"] = ds.attrs["instrument_manufacturer"]
+        ds["instrument_model"] = ds.attrs["instrument_model"]
+        ds["instrument_sn"] = ds.attrs["instrument_sn"]
 
     # Add timezone to time variable
     if timezone:
-        df["time"] = pd.to_datetime(df["time"] + " " + timezone[1], utc=True)
+        ds["time"].values = pd.to_datetime(ds["time"] + " " + timezone[1], utc=True)
     else:
         logger.warning("Unknown timezone, we will assume UTC")
-        df["time"] = pd.to_datetime(df["time"], utc=True)
+        ds["time"] = pd.to_datetime(ds["time"], utc=True)
 
-    return df, metadata
+    # Output data
+    if output == "xarray":
+        return ds
+    elif "dataframe":
+        df = ds.to_dataframe()
+        # Include instrument information within the dataframe
+        df["instrument_manufacturer"] = ds.attrs["instrument_manufacturer"]
+        df["instrument_model"] = ds.attrs["instrument_model"]
+        df["instrument_sn"] = ds.attrs["instrument_sn"]
+        return df
