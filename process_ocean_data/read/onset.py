@@ -48,7 +48,6 @@ def csv(
     output: str = "xarray",
     timezone: str = None,
     convert_units_to_si: bool = True,
-    add_instrument_metadata_as_variable: bool = True,
     input_read_csv_kwargs: dict = {},
 ):
 
