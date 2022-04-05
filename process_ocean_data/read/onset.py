@@ -6,14 +6,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 onset_variables_mapping = {
-    "#": "index",
+    "#": "record_number",
     "Date Time": "time",
     "Temp": "temperature",
     "Intensity": "light_intensity",
     "Specific Conductance": "specific_conductance",
     "Low Range": "conductivity",
     "EOF": "end_of_file",
-    "End of File": "end_of_file":
+    "End of File": "end_of_file",
     "Abs Pres Barom.": "absolute_barometric_pressure",
     "Abs Pres": "absolute_pressure",
     "Sensor Depth": "instrument_depth",
@@ -21,14 +21,35 @@ onset_variables_mapping = {
     "Water Level": "water_level",
 }
 
+ignored_variables = [
+    "record_number",
+    "time",
+    "button_up",
+    "button_down",
+    "host_connected",
+    "end_of_file",
+    "coupler_detached",
+    "coupler_attached",
+    "stopped",
+    "started",
+    "good_battery",
+    "bad_battery",
+    "host_connect",
+    "batt",
+    "low_power",
+    "water_detect",
+    "record",
+    "",
+]
+
 
 def csv(
     path,
-    output="xarray",
-    timezone=None,
-    convert_units_to_si=True,
-    add_instrument_metadata_as_variable=True,
-    pd_read_csv_kwargs={},
+    output: str = "xarray",
+    timezone: str = None,
+    convert_units_to_si: bool = True,
+    add_instrument_metadata_as_variable: bool = True,
+    input_read_csv_kwargs: dict = {},
 ):
 
     """tidbit_csv parses the Onset Tidbit CSV format into a pandas dataframe
@@ -38,13 +59,42 @@ def csv(
         metadata: metadata dictionary
     """
     csv_format = "Plot Title"
-    with open(path, "r") as f:
+    with open(path, "r", encoding="UTF-8") as f:
         first_line = f.readline().replace("\n", "")
+        skiplines = 1
         if "Serial Number:" in first_line:
             # skip second empty line
             csv_format = "Serial Number"
             f.readline()
-        ds = pd.read_csv(f, na_values=[" "], **pd_read_csv_kwargs).to_xarray()
+            skiplines += 1
+        # Read csv columns
+        columns_line = f.readline()
+
+    # Handle Date Time variable with timezone
+    header_timezone = re.search("GMT\s*([\-\+\d\:]*)", columns_line)
+    timezone = header_timezone[1] if header_timezone else ""
+
+    # Inputs to pd.read_csv
+    read_csv_kwargs = {
+        "na_values": [" "],
+        "infer_datetime_format": True,
+        "parse_dates": [
+            item
+            for item, col in enumerate(columns_line.split('","'))
+            if "Date Time" in col
+        ],
+        "date_parser": lambda col: pd.to_datetime(col + timezone, utc=True),
+        "index_col": "#" if "#" in columns_line else None,
+        "header": skiplines,
+        "memory_map": True,
+        "encoding": "UTF-8",
+        "engine": "c",
+    }
+
+    read_csv_kwargs.update(input_read_csv_kwargs)
+    df = pd.read_csv(path, **read_csv_kwargs)
+
+    ds = df.to_xarray()
 
     ds.attrs = {"instrument_manufacturer": "Onset", "history": ""}
     # Parse header lines
@@ -57,9 +107,9 @@ def csv(
         columns = ":".join([var for var in ds])
         ds.attrs.update(
             {
-                "logger_sn": set(re.findall("LGR S\/N\: (\d*)", columns)),
-                "instrument_sn": set(re.findall("SEN S\/N\: (\d*)", columns)),
-                "lbl": set(re.findall("lbl: (\d*)", columns)),
+                "logger_sn": ",".join(set(re.findall("LGR S\/N\: (\d*)", columns))),
+                "instrument_sn": ",".join(set(re.findall("SEN S\/N\: (\d*)", columns))),
+                "lbl": ",".join(set(re.findall("lbl: (\d*)", columns))),
             }
         )
     elif csv_format == "Serial Number":
@@ -69,6 +119,8 @@ def csv(
 
     # Rename variables
     original_columns = [var for var in ds]
+    for var in ds:
+        ds[var].attrs["original_column_name"] = var
 
     # Drop those components from the column names
     var_names_with_units = [
@@ -89,100 +141,77 @@ def csv(
         else None
         for item in var_names_with_units
     ]
-    var_names = [re.split("\,|\(|\)", item)[0].strip() for item in var_names_with_units]
-    ds = ds.rename(dict(zip(original_columns, var_names)))
-
-    # Add units to the appropriate field
-    for var, units in dict(zip(var_names, units)):
+    for var, units in zip(original_columns, units):
         if units and "Date Time" not in var:
             ds[var].attrs["units"] = units
 
-    # Rename variables available
-    df = df.rename(
-        columns={
-            key: value
-            for key, value in onset_variables_mapping.items()
-            if key in df.columns
-        }
-    )
-    # Try to match instrument type based on variables available
-    ignored_variables = [
-        "index",
-        "time",
-        "Button Up",
-        "Button Down",
-        "Host Connected",
-        "End Of File",
-        "Coupler Detached",
-        "Coupler Attached",
-        "Stopped",
-        "Started",
-        "Good Battery",
-        "Bad Battery",
-        "Host Connect",
-        "Batt",
-        "Low Power",
-        "Water Detect",
-        "Record",
-        "",
-    ]
-    vars_of_interest = set(var for var in df.columns if var not in ignored_variables)
+    # Generate variable names
+    var_names = [re.split("\,|\(|\)", item)[0].strip() for item in var_names_with_units]
+    variable_mapping = {
+        original_col: (
+            onset_variables_mapping[var]
+            if var in onset_variables_mapping
+            else var.lower().replace(" ", "_")
+        )
+        for original_col, var in zip(original_columns, var_names)
+    }
+    ds = ds.rename_vars(variable_mapping)
+
+    # Try to match instrument type based on variables available (this information is unfortnately not available withint the CSV)
+    vars_of_interest = set(var for var in ds if var not in ignored_variables)
     if vars_of_interest == {"temperature", "light_intensity"}:
-        metadata["instrument_model"] = "Pendant"
+        ds.attrs["instrument_type"] = "Pendant"
     elif vars_of_interest == {"specific_conductance", "temperature", "conductivity"}:
-        metadata["instrument_model"] = "CT"
+        ds.attrs["instrument_type"] = "CT"
     elif vars_of_interest == {"temperature", "specific_conductance"}:
-        metadata["instrument_model"] = "CT"
+        ds.attrs["instrument_type"] = "CT"
     elif vars_of_interest == {"temperature"}:
-        metadata["instrument_model"] = "Tidbit"
+        ds.attrs["instrument_type"] = "Tidbit"
     elif vars_of_interest == {"temperature", "depth"}:
-        metadata["instrument_model"] = "PT"
+        ds.attrs["instrument_type"] = "PT"
     elif vars_of_interest == {
         "temperature",
         "absolute_barometric_pressure",
         "absolute_pressure",
         "depth",
     }:
-        metadata["instrument_model"] = "WL"
+        ds.attrs["instrument_type"] = "WL"
     elif vars_of_interest == {
         "temperature",
         "absolute_barometric_pressure",
         "absolute_pressure",
         "water_level",
     }:
-        metadata["instrument_model"] = "WL"
+        ds.attrs["instrument_type"] = "WL"
     elif vars_of_interest == {"temperature", "absolute_pressure"}:
-        metadata["instrument_model"] = "airPT"
+        ds.attrs["instrument_type"] = "airPT"
     elif vars_of_interest == {"absolute_barometric_pressure"}:
-        metadata["instrument_model"] = "airP"
+        ds.attrs["instrument_type"] = "airP"
     else:
-        metadata["instrument_model"] = "unknown"
+        ds.attrs["instrument_type"] = "unknown"
         logger.warning(
             f"Unknown Hobo instrument type with variables: {vars_of_interest}"
         )
-    # Review units
-    if "Temp" in metadata["variables"] and (
-        "C" not in metadata["variables"]["Temp"]["units"]
+
+    # # Review units and convert SI system
+    if (
+        convert_units_to_si
+        and "temperature" in ds
+        and ("C" not in ds["temperature"].attrs["units"])
+    ):
+        string_comment = f"Convert temperature ({ds['temperature'].attrs['units']}) to degree Celius [(degF-32)/1.8000]"
+        logger.warning(string_comment)
+        ds["temperature"] = (ds["temperature"] - 32.0) / 1.8000
+        ds["temperature"].attrs["units"] = "degC"
+        ds.attrs["history"] += f"{datetime.now()} {string_comment}"
+    if (
+        convert_units_to_si
+        and "conductivity" in ds
+        and "uS/cm" not in ds["conductivity"].attrs["units"]
     ):
         logger.warning(
-            f"Temperature is not in degre Celsius: {metadata['variables']['Temp']}"
+            f"Unknown conductivity units ({ds['conductivity'].attrs['units']})"
         )
-        df["temperature"] = (df["temperature"] - 32.0) / 1.8000
-        metadata["variables"]["Temp"]["units"] = "degC"
-        logger.warning("Temperature was coverted to degree Celius [(degF-32)/1.8000]")
-
-    # Add instrument information to data table3
-    if add_instrument_metadata_as_variable:
-        ds["instrument_manufacturer"] = ds.attrs["instrument_manufacturer"]
-        ds["instrument_model"] = ds.attrs["instrument_model"]
-        ds["instrument_sn"] = ds.attrs["instrument_sn"]
-
-    # Add timezone to time variable
-    if timezone:
-        ds["time"].values = pd.to_datetime(ds["time"] + " " + timezone[1], utc=True)
-    else:
-        logger.warning("Unknown timezone, we will assume UTC")
-        ds["time"] = pd.to_datetime(ds["time"], utc=True)
 
     # Output data
     if output == "xarray":
@@ -191,6 +220,6 @@ def csv(
         df = ds.to_dataframe()
         # Include instrument information within the dataframe
         df["instrument_manufacturer"] = ds.attrs["instrument_manufacturer"]
-        df["instrument_model"] = ds.attrs["instrument_model"]
+        df["instrument_type"] = ds.attrs["instrument_type"]
         df["instrument_sn"] = ds.attrs["instrument_sn"]
         return df
