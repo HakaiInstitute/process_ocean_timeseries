@@ -73,17 +73,13 @@ def csv(
     # Handle Date Time variable with timezone
     header_timezone = re.search("GMT\s*([\-\+\d\:]*)", columns_line)
     timezone = header_timezone[1] if header_timezone else ""
-
+    time_variable = re.search('[^\"]*Date Time[^\"]*',columns_line)[0]
     # Inputs to pd.read_csv
     read_csv_kwargs = {
         "na_values": [" "],
         "infer_datetime_format": True,
-        "parse_dates": [
-            item
-            for item, col in enumerate(columns_line.split('","'))
-            if "Date Time" in col
-        ],
-        "date_parser": lambda col: pd.to_datetime(col + timezone, utc=True),
+        "parse_dates": [time_variable],
+        "converters": {time_variable: lambda col: pd.to_datetime(col).tz_localize(timezone)},
         "index_col": "#" if "#" in columns_line else None,
         "header": skiplines,
         "memory_map": True,
