@@ -14,7 +14,7 @@ onset_variables_mapping = {
     "Low Range": "low_range",
     "EOF": "end_of_file",
     "End of File": "end_of_file",
-    "Abs Pres Barom.": "pressure",
+    "Abs Pres Barom.": "barometric_pressure",
     "Abs Pres": "pressure",
     "Sensor Depth": "sensor_depth",
     "Turbidity": "turbidity",
@@ -159,31 +159,31 @@ def csv(
     vars_of_interest = set(var for var in ds if var not in ignored_variables)
     if vars_of_interest == {"temperature", "light_intensity"}:
         ds.attrs["instrument_type"] = "Pendant"
-    elif vars_of_interest == {"specific_conductance", "temperature", "conductivity"}:
+    elif vars_of_interest == {"specific_conductance", "temperature", "low_range"}:
         ds.attrs["instrument_type"] = "CT"
     elif vars_of_interest == {"temperature", "specific_conductance"}:
         ds.attrs["instrument_type"] = "CT"
     elif vars_of_interest == {"temperature"}:
         ds.attrs["instrument_type"] = "Tidbit"
-    elif vars_of_interest == {"temperature", "depth"}:
+    elif vars_of_interest == {"temperature", "sensor_depth"}:
         ds.attrs["instrument_type"] = "PT"
     elif vars_of_interest == {
         "temperature",
-        "absolute_barometric_pressure",
-        "absolute_pressure",
+        "barometric_pressure",
+        "pressure",
         "depth",
     }:
         ds.attrs["instrument_type"] = "WL"
     elif vars_of_interest == {
         "temperature",
-        "absolute_barometric_pressure",
-        "absolute_pressure",
+        "barometric_pressure",
+        "pressure",
         "water_level",
     }:
         ds.attrs["instrument_type"] = "WL"
-    elif vars_of_interest == {"temperature", "absolute_pressure"}:
+    elif vars_of_interest == {"temperature", "pressure"}:
         ds.attrs["instrument_type"] = "airPT"
-    elif vars_of_interest == {"absolute_barometric_pressure"}:
+    elif vars_of_interest == {"barometric_pressure"}:
         ds.attrs["instrument_type"] = "airP"
     else:
         ds.attrs["instrument_type"] = "unknown"
