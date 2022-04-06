@@ -57,7 +57,7 @@ def csv(
         df: data in pandas dataframe
         metadata: metadata dictionary
     """
-    encoding = input_read_csv_kwargs.get('encoding','UTF-8')
+    encoding = input_read_csv_kwargs.get("encoding", "UTF-8")
     csv_format = "Plot Title"
     with open(path, "r", encoding=encoding) as f:
         first_line = f.readline().replace("\n", "")
@@ -73,13 +73,17 @@ def csv(
     # Handle Date Time variable with timezone
     header_timezone = re.search("GMT\s*([\-\+\d\:]*)", columns_line)
     timezone = header_timezone[1] if header_timezone else ""
-    time_variable = re.search('[^\"]*Date Time[^\"]*',columns_line)[0]
+    time_variable = re.search('[^"]*Date Time[^"]*', columns_line)[0]
     # Inputs to pd.read_csv
     read_csv_kwargs = {
         "na_values": [" "],
         "infer_datetime_format": True,
         "parse_dates": [time_variable],
-        "converters": {time_variable: lambda col: pd.to_datetime(col).tz_localize(timezone)},
+        "converters": {
+            time_variable: lambda col: pd.to_datetime(col)
+            .tz_localize(timezone)
+            .tz_convert("UTC")
+        },
         "index_col": "#" if "#" in columns_line else None,
         "header": skiplines,
         "memory_map": True,
