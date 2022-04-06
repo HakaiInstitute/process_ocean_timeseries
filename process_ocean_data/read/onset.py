@@ -57,8 +57,9 @@ def csv(
         df: data in pandas dataframe
         metadata: metadata dictionary
     """
+    encoding = input_read_csv_kwargs.get('encoding','UTF-8')
     csv_format = "Plot Title"
-    with open(path, "r", encoding="UTF-8") as f:
+    with open(path, "r", encoding=encoding) as f:
         first_line = f.readline().replace("\n", "")
         skiplines = 1
         if "Serial Number:" in first_line:
@@ -86,7 +87,7 @@ def csv(
         "index_col": "#" if "#" in columns_line else None,
         "header": skiplines,
         "memory_map": True,
-        "encoding": "UTF-8",
+        "encoding": encoding,
         "engine": "c",
     }
 
