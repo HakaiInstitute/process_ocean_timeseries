@@ -8,7 +8,7 @@ import re
 import warnings
 
 
-def minidot_txt(path):
+def minidot_txt(path, output="xarray"):
     """
     minidot_txt parses the txt format provided by the PME Minidot instruments.
     """
@@ -27,24 +27,36 @@ def minidot_txt(path):
             return pd.DataFrame(), None
 
         # Read the data with pandas
-        df = pd.read_csv(f)
+        ds = pd.read_csv(
+            f,
+            parse_dates=[0],
+            infer_datetime_format=True,
+            date_parser=lambda x: pd.to_datetime(x, unit="s", utc=True),
+        ).to_xarray()
 
-    df.columns = [col.strip() for col in df.columns]
-
-    metadata = metadata.groupdict()
-    metadata.update(
+    ds = ds.rename_vars({var: var.strip() for var in ds})
+    ds.attrs = metadata.groupdict()
+    ds.attrs.update(
         {
             "instrument_manufacturer": "PME",
             "instrument_model": "MiniDot",
             "instrument_sn": serial_number,
+            "history": "",
         }
     )
 
-    # Convert time to datetime and include
-    df["time"] = pd.to_timedelta(df["Time (sec)"], unit="s") + pd.to_datetime(
-        "1970-01-01T00:00:00Z"
-    )
-    return df, metadata
+    if output == "xarray":
+        return ds
+    elif output == "dataframe":
+        df = ds.to_dataframe()
+        add_attributes = [
+            "instrument_sn",
+            "instrument_model",
+            "instrument_manufacturer",
+        ]
+        for att in add_attributes:
+            df.insert(0, att, ds.attrs[att])
+        return df
 
 
 def minidot_txts(paths: list or str):
@@ -61,27 +73,15 @@ def minidot_txts(paths: list or str):
     metadatas = []
 
     for path in paths:
-
         # Ignore concatenated Cat.TXT files or not TXT file
         if path.endswith("Cat.TXT") or not path.endswith(("TXT", "txt")):
             print(f"Ignore {path}")
             continue
 
         # Read txt file
-        df_temp, metadata = minidot_txt(path)
+        df = df.append(minidot_txt(path))
 
-        # Add metadata information to the table on the left
-        for key, value in metadata.items():
-            df_temp.insert(0, key, value)
-
-        # Add to previous data
-        df = df.append(df_temp)
-
-        # Compile each individual instrument caliration serial number and software version
-        if all([metadata != meta for meta in metadatas]):
-            metadatas.append(metadata)
-
-    return df, metadatas
+    return df
 
 
 def minidot_cat(path):
