@@ -11,12 +11,12 @@ onset_variables_mapping = {
     "Temp": "temperature",
     "Intensity": "light_intensity",
     "Specific Conductance": "specific_conductance",
-    "Low Range": "conductivity",
+    "Low Range": "low_range",
     "EOF": "end_of_file",
     "End of File": "end_of_file",
-    "Abs Pres Barom.": "absolute_barometric_pressure",
-    "Abs Pres": "absolute_pressure",
-    "Sensor Depth": "instrument_depth",
+    "Abs Pres Barom.": "pressure",
+    "Abs Pres": "pressure",
+    "Sensor Depth": "sensor_depth",
     "Turbidity": "turbidity",
     "Water Level": "water_level",
 }
@@ -91,9 +91,7 @@ def csv(
     }
 
     read_csv_kwargs.update(input_read_csv_kwargs)
-    df = pd.read_csv(path, **read_csv_kwargs)
-
-    ds = df.to_xarray()
+    ds = pd.read_csv(path, **read_csv_kwargs).to_xarray()
 
     ds.attrs = {"instrument_manufacturer": "Onset", "history": ""}
     # Parse header lines
