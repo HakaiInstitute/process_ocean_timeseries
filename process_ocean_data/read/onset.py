@@ -61,12 +61,10 @@ def csv(
     csv_format = "Plot Title"
     with open(path, "r", encoding=encoding) as f:
         first_line = f.readline().replace("\n", "")
-        skiplines = 1
         if "Serial Number:" in first_line:
             # skip second empty line
             csv_format = "Serial Number"
-            f.readline()
-            skiplines += 1
+            f.readline()  #
         # Read csv columns
         columns_line = f.readline()
 
@@ -85,7 +83,7 @@ def csv(
             .tz_convert("UTC")
         },
         "index_col": "#" if "#" in columns_line else None,
-        "header": skiplines,
+        "header": 1,
         "memory_map": True,
         "encoding": encoding,
         "engine": "c",
