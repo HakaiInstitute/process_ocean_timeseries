@@ -61,9 +61,11 @@ def csv(
     csv_format = "Plot Title"
     with open(path, "r", encoding=encoding) as f:
         first_line = f.readline().replace("\n", "")
+        header_lines = 1
         if "Serial Number:" in first_line:
             # skip second empty line
             csv_format = "Serial Number"
+            header_lines += 1
             f.readline()  #
         # Read csv columns
         columns_line = f.readline()
@@ -83,7 +85,8 @@ def csv(
             .tz_convert("UTC")
         },
         "index_col": "#" if "#" in columns_line else None,
-        "header": 1,
+        "header": header_lines,
+        "skip_blank_lines": False,
         "memory_map": True,
         "encoding": encoding,
         "engine": "c",
@@ -110,7 +113,11 @@ def csv(
         )
     elif csv_format == "Serial Number":
         ds.attrs.update(
-            {"instrument_sn": set(re.findall("Serial Number\:(\d+)", first_line))}
+            {
+                "instrument_sn": ",".join(
+                    set(re.findall("Serial Number\:(\d+)", first_line))
+                )
+            }
         )
 
     # Rename variables
