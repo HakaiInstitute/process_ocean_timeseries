@@ -1,7 +1,7 @@
 import pandas as pd
 import re
 from datetime import datetime
-
+from csv import reader
 import logging
 
 logger = logging.getLogger(__name__)
@@ -69,18 +69,23 @@ def csv(
             f.readline()  #
         # Read csv columns
         columns_line = f.readline()
-
+    columns_name = list(reader([columns_line], delimiter=",", quotechar='"'))[0]
     # Handle Date Time variable with timezone
     header_timezone = re.search("GMT\s*([\-\+\d\:]*)", columns_line)
-    timezone = header_timezone[1] if header_timezone else ""
-    time_variable = re.search('[^"]*Date Time[^"]*', columns_line)[0]
+    timezone = header_timezone[1] if header_timezone else None
+    if timezone == None:
+        logger.warning("No Timezone available within this file. UTC will be assumed.")
+        timezone = "UTC"
+
+    time_variable = [var for var in columns_name if "Date Time" in var]
+
     # Inputs to pd.read_csv
     read_csv_kwargs = {
         "na_values": [" "],
         "infer_datetime_format": True,
-        "parse_dates": [time_variable],
+        "parse_dates": time_variable,
         "converters": {
-            time_variable: lambda col: pd.to_datetime(col)
+            time_variable[0]: lambda col: pd.to_datetime(col)
             .tz_localize(timezone)
             .tz_convert("UTC")
         },
