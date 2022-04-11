@@ -156,7 +156,9 @@ def csv(
     ds = ds.rename_vars(variable_mapping)
 
     # Try to match instrument type based on variables available (this information is unfortnately not available withint the CSV)
-    vars_of_interest = set(var for var in ds if var not in ignored_variables)
+    vars_of_interest = set(
+        var for var in ds if var not in ignored_variables or var.startswith("unnamed")
+    )
     if vars_of_interest == {"temperature", "light_intensity"}:
         ds.attrs["instrument_type"] = "Pendant"
     elif vars_of_interest == {"specific_conductance", "temperature", "low_range"}:
@@ -165,13 +167,13 @@ def csv(
         ds.attrs["instrument_type"] = "CT"
     elif vars_of_interest == {"temperature"}:
         ds.attrs["instrument_type"] = "Tidbit"
-    elif vars_of_interest == {"temperature", "sensor_depth"}:
+    elif vars_of_interest == {"temperature", "pressure", "sensor_depth"}:
         ds.attrs["instrument_type"] = "PT"
     elif vars_of_interest == {
         "temperature",
         "barometric_pressure",
         "pressure",
-        "depth",
+        "sensor_depth",
     }:
         ds.attrs["instrument_type"] = "WL"
     elif vars_of_interest == {
@@ -185,6 +187,8 @@ def csv(
         ds.attrs["instrument_type"] = "airPT"
     elif vars_of_interest == {"barometric_pressure"}:
         ds.attrs["instrument_type"] = "airP"
+    elif vars_of_interest == {"turbidity"}:
+        ds.attrs["instrument_type"] = "turbidity"
     else:
         ds.attrs["instrument_type"] = "unknown"
         logger.warning(
