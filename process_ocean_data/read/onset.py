@@ -15,6 +15,7 @@ onset_variables_mapping = {
     "EOF": "end_of_file",
     "End of File": "end_of_file",
     "Abs Pres Barom.": "barometric_pressure",
+    "Pressure Barom.": "barometric_pressure",
     "Abs Pres": "pressure",
     "Sensor Depth": "sensor_depth",
     "Turbidity": "turbidity",
@@ -89,7 +90,6 @@ def csv(
             .tz_localize(timezone)
             .tz_convert("UTC")
         },
-        "index_col": "#" if "#" in columns_line else None,
         "header": header_lines,
         "skip_blank_lines": False,
         "memory_map": True,
@@ -167,7 +167,9 @@ def csv(
 
     # Try to match instrument type based on variables available (this information is unfortnately not available withint the CSV)
     vars_of_interest = set(
-        var for var in ds if var not in ignored_variables or var.startswith("unnamed")
+        var
+        for var in ds
+        if var not in ignored_variables and not var.startswith("unnamed")
     )
     if vars_of_interest == {"temperature", "light_intensity"}:
         ds.attrs["instrument_type"] = "Pendant"
@@ -177,6 +179,8 @@ def csv(
         ds.attrs["instrument_type"] = "CT"
     elif vars_of_interest == {"temperature"}:
         ds.attrs["instrument_type"] = "Tidbit"
+    elif vars_of_interest == {"temperature", "sensor_depth"}:
+        ds.attrs["instrument_type"] = "PT"
     elif vars_of_interest == {"temperature", "pressure", "sensor_depth"}:
         ds.attrs["instrument_type"] = "PT"
     elif vars_of_interest == {
