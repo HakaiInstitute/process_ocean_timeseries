@@ -112,7 +112,10 @@ def csv(
         ds.attrs.update(
             {
                 "logger_sn": ",".join(set(re.findall("LGR S\/N\: (\d*)", columns))),
-                "instrument_sn": ",".join(set(re.findall("SEN S\/N\: (\d*)", columns))),
+                "sensor_sn": ",".join(set(re.findall("SEN S\/N\: (\d*)", columns))),
+                "instrument_sn": ",".join(
+                    set(re.findall("(?:SEN|LGR) S\/N\: (\d*)", columns))
+                ),
                 "lbl": ",".join(set(re.findall("lbl: (\d*)", columns))),
             }
         )
