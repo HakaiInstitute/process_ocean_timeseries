@@ -228,6 +228,9 @@ def csv(
         logger.warning(
             f"Unknown conductivity units ({ds['conductivity'].attrs['units']})"
         )
+    # Test Result
+    if ds.attrs["instrument_sn"] == None:
+        logger.warning("Failed to retrieve instrument serial number")
 
     # Output data
     if output == "xarray":
