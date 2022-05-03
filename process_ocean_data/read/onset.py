@@ -44,6 +44,13 @@ ignored_variables = [
 ]
 
 
+def parse_onset_time(time, timezone='UTC'):
+    if re.match('\d\d\/\d\d\/\d\d\s+\d\d\:\d\d\:\d\d\s+\w\w',time):
+        format = '%m/%d/%y %I:%M:%S %p'
+    else:
+        format = None
+    return pd.to_datetime(time,format=format).tz_localize(timezone).tz_convert("UTC")
+
 def csv(
     path,
     output: str = "xarray",
@@ -86,9 +93,7 @@ def csv(
         "infer_datetime_format": True,
         "parse_dates": time_variable,
         "converters": {
-            time_variable[0]: lambda col: pd.to_datetime(col)
-            .tz_localize(timezone)
-            .tz_convert("UTC")
+            time_variable[0]: lambda col: parse_onset_time(col,timezone)
         },
         "header": header_lines,
         "skip_blank_lines": False,
@@ -102,11 +107,6 @@ def csv(
 
     ds.attrs = {"instrument_manufacturer": "Onset", "history": ""}
     # Parse header lines
-    if timezone == None:
-        timezone = re.search(
-            "GMT\s*([\-\+\d\:]*)", [var for var in ds if "Date Time" in var][0]
-        )
-
     if csv_format == "Plot Title":
         columns = ":".join([var for var in ds])
         ds.attrs.update(
