@@ -49,6 +49,8 @@ def parse_onset_time(time, timezone='UTC'):
         format = '%m/%d/%y %I:%M:%S %p'
     elif re.match('\d\d\-\d\d\-\d\d\s+\d{1,2}\:\d\d',time):
         format = '%y-%m-%d %H:%M'
+    elif re.match('\d\d\d\d\-\d\d\-\d\d\s+\d{1,2}\:\d\d',time):
+        format = '%Y-%m-%d %H:%M'
     else:
         format = None
     return pd.to_datetime(time,format=format).tz_localize(timezone).tz_convert("UTC")
