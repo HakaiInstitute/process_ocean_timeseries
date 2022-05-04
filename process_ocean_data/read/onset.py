@@ -47,6 +47,8 @@ ignored_variables = [
 def parse_onset_time(time, timezone='UTC'):
     if re.match('\d\d\/\d\d\/\d\d\s+\d\d\:\d\d\:\d\d\s+\w\w',time):
         format = '%m/%d/%y %I:%M:%S %p'
+    elif re.match('\d\d\-\d\d\-\d\d\s+\d{1,2}\:\d\d',time):
+        format = '%y-%m-%d %H:%M'
     else:
         format = None
     return pd.to_datetime(time,format=format).tz_localize(timezone).tz_convert("UTC")
