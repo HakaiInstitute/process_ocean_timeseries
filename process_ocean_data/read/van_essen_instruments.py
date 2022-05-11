@@ -1,6 +1,5 @@
-import xarray as xr
 import pandas as pd
-import os
+
 import re
 import logging
 
@@ -23,9 +22,7 @@ def MON(file_path, encoding="UTF-8", errors="ignore"):
     with open(file_path, encoding=encoding, errors=errors) as fid:
         line = ""
         section = "header_info"
-        info = {}
-        info[section] = {}
-
+        info = {section: {}}
         while not line.startswith(header_end):
             # Read line by line
             line = fid.readline()
@@ -33,8 +30,8 @@ def MON(file_path, encoding="UTF-8", errors="ignore"):
                 section = re.search("\[(.+)\]", line)[1]
                 if section not in info:
                     info[section] = {}
-            elif re.match("\s*(?P<key>[\w\s]+)(\=|\:)(?P<value>.+)", line):
-                item = re.search("\s*(?P<key>[\w\s]+)(\=|\:)(?P<value>.+)", line)
+            elif re.match(r"\s*(?P<key>[\w\s]+)(\=|\:)(?P<value>.+)", line):
+                item = re.search(r"\s*(?P<key>[\w\s]+)(\=|\:)(?P<value>.+)", line)
                 info[section][item["key"].strip()] = item["value"].strip()
             else:
                 continue
@@ -42,10 +39,10 @@ def MON(file_path, encoding="UTF-8", errors="ignore"):
         # Regroup channels
         info["Channel"] = {}
         for key, items in info.items():
-            if key.startswith("Channel") and key.endswith("from data header"):
-                id = re.search("Channel (\d+) from data header", key)[1]
+            id = re.search(r"Channel (\d+) from data header", key)
+            if id:
                 info["Channel"][items["Identification"]] = items
-                info["Channel"][items["Identification"]]["id"] = int(id)
+                info["Channel"][items["Identification"]]["id"] = int(id[1])
 
         # Define column names
         channel_names = ["time"] + [
@@ -88,8 +85,8 @@ def MON(file_path, encoding="UTF-8", errors="ignore"):
         columns={"1: CONDUCTIVITY": "CONDUCTIVITY", "2: SPEC.COND.": "SPEC.COND."}
     )
     # IF PRESSURE in cm, convert to meter
-    if "PRESSURE" in df.columns and 'cm' in info['Channel']['PRESSURE']['Range']:
-        logger.info('Convert Pressure from cm to m')
+    if "PRESSURE" in df.columns and "cm" in info["Channel"]["PRESSURE"]["Range"]:
+        logger.info("Convert Pressure from cm to m")
         df["PRESSURE"] = df["PRESSURE"] / 100
 
     # Add Conductivity if missing

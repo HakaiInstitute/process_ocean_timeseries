@@ -70,8 +70,6 @@ def minidot_txts(paths: list or str):
         paths = [paths]
 
     df = pd.DataFrame()
-    metadatas = []
-
     for path in paths:
         # Ignore concatenated Cat.TXT files or not TXT file
         if path.endswith("Cat.TXT") or not path.endswith(("TXT", "txt")):

@@ -44,25 +44,28 @@ ignored_variables = [
 ]
 
 
-def parse_onset_time(time, timezone='UTC'):
-    if re.match('\d\d\/\d\d\/\d\d\s+\d\d\:\d\d\:\d\d\s+\w\w',time):
-        format = '%m/%d/%y %I:%M:%S %p'
-    elif re.match('\d\d\/\d\d\/\d\d\s+\d\d\:\d\d',time):
-        format = '%m/%d/%y %H:%M'
-    elif re.match('\d\d\-\d\d\-\d\d\s+\d{1,2}\:\d\d',time):
-        format = '%y-%m-%d %H:%M'
-    elif re.match('\d\d\d\d\-\d\d\-\d\d\s+\d{1,2}\:\d\d',time):
-        format = '%Y-%m-%d %H:%M'
+def parse_onset_time(time, timezone="UTC"):
+    if re.match(r"\d\d\/\d\d\/\d\d\s+\d\d\:\d\d\:\d\d\s+\w\w", time):
+        time_format = r"%m/%d/%y %I:%M:%S %p"
+    elif re.match(r"\d\d\/\d\d\/\d\d\s+\d\d\:\d\d", time):
+        time_format = r"%m/%d/%y %H:%M"
+    elif re.match(r"\d\d\-\d\d\-\d\d\s+\d{1,2}\:\d\d", time):
+        time_format = r"%y-%m-%d %H:%M"
+    elif re.match(r"\d\d\d\d\-\d\d\-\d\d\s+\d{1,2}\:\d\d", time):
+        time_format = r"%Y-%m-%d %H:%M"
     else:
-        format = None
-    return pd.to_datetime(time,format=format).tz_localize(timezone).tz_convert("UTC")
+        time_format = None
+    return (
+        pd.to_datetime(time, format=time_format).tz_localize(timezone).tz_convert("UTC")
+    )
+
 
 def csv(
     path,
     output: str = "xarray",
     timezone: str = None,
     convert_units_to_si: bool = True,
-    input_read_csv_kwargs: dict = {},
+    input_read_csv_kwargs: dict = None,
 ):
 
     """tidbit_csv parses the Onset Tidbit CSV format into a pandas dataframe
@@ -71,6 +74,8 @@ def csv(
         df: data in pandas dataframe
         metadata: metadata dictionary
     """
+    if input_read_csv_kwargs is None:
+        input_read_csv_kwargs = {}
     encoding = input_read_csv_kwargs.get("encoding", "UTF-8")
     csv_format = "Plot Title"
     with open(path, "r", encoding=encoding) as f:
@@ -84,10 +89,11 @@ def csv(
         # Read csv columns
         columns_line = f.readline()
     columns_name = list(reader([columns_line], delimiter=",", quotechar='"'))[0]
+
     # Handle Date Time variable with timezone
     header_timezone = re.search("GMT\s*([\-\+\d\:]*)", columns_line)
     timezone = header_timezone[1] if header_timezone else None
-    if timezone == None:
+    if timezone is None:
         logger.warning("No Timezone available within this file. UTC will be assumed.")
         timezone = "UTC"
 
@@ -98,23 +104,21 @@ def csv(
         "na_values": [" "],
         "infer_datetime_format": True,
         "parse_dates": time_variable,
-        "converters": {
-            time_variable[0]: lambda col: parse_onset_time(col,timezone)
-        },
+        "converters": {time_variable[0]: lambda col: parse_onset_time(col, timezone)},
         "header": header_lines,
         "skip_blank_lines": False,
         "memory_map": True,
         "encoding": encoding,
         "engine": "c",
     }
-
     read_csv_kwargs.update(input_read_csv_kwargs)
     ds = pd.read_csv(path, **read_csv_kwargs).to_xarray()
 
     ds.attrs = {"instrument_manufacturer": "Onset", "history": ""}
+
     # Parse header lines
     if csv_format == "Plot Title":
-        columns = ":".join([var for var in ds])
+        columns = ":".join(list(ds))
         ds.attrs.update(
             {
                 "logger_sn": ",".join(set(re.findall("LGR S\/N\: (\d*)", columns))),
@@ -126,16 +130,12 @@ def csv(
             }
         )
     elif csv_format == "Serial Number":
-        ds.attrs.update(
-            {
-                "instrument_sn": ",".join(
-                    set(re.findall("Serial Number\:(\d+)", first_line))
-                )
-            }
+        ds.attrs["instrument_sn"] = ",".join(
+            set(re.findall("Serial Number\:(\d+)", first_line))
         )
 
     # Rename variables
-    original_columns = [var for var in ds]
+    original_columns = list(ds)
     for var in ds:
         ds[var].attrs["original_column_name"] = var
 
@@ -174,49 +174,49 @@ def csv(
     }
     ds = ds.rename_vars(variable_mapping)
 
-    # Try to match instrument type based on variables available (this information is unfortnately not available withint the CSV)
-    vars_of_interest = set(
-        var
-        for var in ds
-        if var not in ignored_variables and not var.startswith("unnamed")
-    )
-    if vars_of_interest == {"temperature", "light_intensity"}:
-        ds.attrs["instrument_type"] = "Pendant"
-    elif vars_of_interest == {"specific_conductance", "temperature", "low_range"}:
-        ds.attrs["instrument_type"] = "CT"
-    elif vars_of_interest == {"temperature", "specific_conductance"}:
-        ds.attrs["instrument_type"] = "CT"
-    elif vars_of_interest == {"temperature"}:
-        ds.attrs["instrument_type"] = "Tidbit"
-    elif vars_of_interest == {"temperature", "sensor_depth"}:
-        ds.attrs["instrument_type"] = "PT"
-    elif vars_of_interest == {"temperature", "pressure", "sensor_depth"}:
-        ds.attrs["instrument_type"] = "PT"
-    elif vars_of_interest == {
-        "temperature",
-        "barometric_pressure",
-        "pressure",
-        "sensor_depth",
-    }:
-        ds.attrs["instrument_type"] = "WL"
-    elif vars_of_interest == {
-        "temperature",
-        "barometric_pressure",
-        "pressure",
-        "water_level",
-    }:
-        ds.attrs["instrument_type"] = "WL"
-    elif vars_of_interest == {"temperature", "pressure"}:
-        ds.attrs["instrument_type"] = "airPT"
-    elif vars_of_interest == {"barometric_pressure"}:
-        ds.attrs["instrument_type"] = "airP"
-    elif vars_of_interest == {"turbidity"}:
-        ds.attrs["instrument_type"] = "turbidity"
-    else:
-        ds.attrs["instrument_type"] = "unknown"
-        logger.warning(
-            f"Unknown Hobo instrument type with variables: {vars_of_interest}"
-        )
+    # # Try to match instrument type based on variables available (this information is unfortnately not available withint the CSV)
+    # vars_of_interest = set(
+    #     var
+    #     for var in ds
+    #     if var not in ignored_variables and not var.startswith("unnamed")
+    # )
+    # if vars_of_interest == {"temperature", "light_intensity"}:
+    #     ds.attrs["instrument_type"] = "Pendant"
+    # elif vars_of_interest == {"specific_conductance", "temperature", "low_range"}:
+    #     ds.attrs["instrument_type"] = "CT"
+    # elif vars_of_interest == {"temperature", "specific_conductance"}:
+    #     ds.attrs["instrument_type"] = "CT"
+    # elif vars_of_interest == {"temperature"}:
+    #     ds.attrs["instrument_type"] = "Tidbit"
+    # elif vars_of_interest == {"temperature", "sensor_depth"}:
+    #     ds.attrs["instrument_type"] = "PT"
+    # elif vars_of_interest == {"temperature", "pressure", "sensor_depth"}:
+    #     ds.attrs["instrument_type"] = "PT"
+    # elif vars_of_interest == {
+    #     "temperature",
+    #     "barometric_pressure",
+    #     "pressure",
+    #     "sensor_depth",
+    # }:
+    #     ds.attrs["instrument_type"] = "WL"
+    # elif vars_of_interest == {
+    #     "temperature",
+    #     "barometric_pressure",
+    #     "pressure",
+    #     "water_level",
+    # }:
+    #     ds.attrs["instrument_type"] = "WL"
+    # elif vars_of_interest == {"temperature", "pressure"}:
+    #     ds.attrs["instrument_type"] = "airPT"
+    # elif vars_of_interest == {"barometric_pressure"}:
+    #     ds.attrs["instrument_type"] = "airP"
+    # elif vars_of_interest == {"turbidity"}:
+    #     ds.attrs["instrument_type"] = "turbidity"
+    # else:
+    #     ds.attrs["instrument_type"] = "unknown"
+    #     logger.warning(
+    #         f"Unknown Hobo instrument type with variables: {vars_of_interest}"
+    #     )
 
     # # Review units and convert SI system
     if (
@@ -238,16 +238,14 @@ def csv(
             f"Unknown conductivity units ({ds['conductivity'].attrs['units']})"
         )
     # Test Result
-    if ds.attrs["instrument_sn"] == None:
+    if ds.attrs["instrument_sn"] is None:
         logger.warning("Failed to retrieve instrument serial number")
 
-    # Output data
     if output == "xarray":
         return ds
-    elif "dataframe":
-        df = ds.to_dataframe()
-        # Include instrument information within the dataframe
-        df["instrument_manufacturer"] = ds.attrs["instrument_manufacturer"]
-        df["instrument_type"] = ds.attrs["instrument_type"]
-        df["instrument_sn"] = ds.attrs["instrument_sn"]
-        return df
+    df = ds.to_dataframe()
+    # Include instrument information within the dataframe
+    df["instrument_manufacturer"] = ds.attrs["instrument_manufacturer"]
+    df["instrument_type"] = ds.attrs["instrument_type"]
+    df["instrument_sn"] = ds.attrs["instrument_sn"]
+    return df
