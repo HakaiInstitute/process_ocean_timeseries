@@ -24,7 +24,7 @@ def add_seabird_vocabulary(variable_attributes):
         if var in seabird_variable_attributes:
             variable_attributes[var].update(seabird_variable_attributes[var])
         else:
-            logger.warning(f'Unknown variable {var}')
+            logger.warning(f'Variable {var} is missing from vocabulary dictionary')
     return variable_attributes
 
 def cnv(file_path, output='xarray'):
@@ -212,6 +212,9 @@ def generate_seabird_cf_history(attrs, drop_processing_attrs=False):
     history = []
     for step in sbe_processing_steps:
         step_attrs = {key.replace(step+'_',''): value for key,value in attrs.items()if key.startswith(step)}
+        if not step_attrs:
+            continue
+
         date_line = step_attrs.pop('date')
         date_str, extra = date_line.split(',',1)
         iso_date_str = pd.to_datetime(date_str).isoformat()
