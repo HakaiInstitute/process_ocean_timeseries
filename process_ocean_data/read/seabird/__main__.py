@@ -105,7 +105,9 @@ def convert_sbe_dataframe_to_dataset(df,header):
 
 def parse_seabird_file_header(f):
     def unknown_line(line):
-        header['comments'] += [line]
+        if line in ('* S>\n'):
+            return 
+        header['history'] += [re.sub('\*\s|\n','', line)]
         logger.warning(f'Unknown line format: {line}')
     def standardize_attribute(attribute):
         return attribute.strip().replace(' ','_').lower()
@@ -148,7 +150,7 @@ def parse_seabird_file_header(f):
     header = {}
     header['variables'] = {}
     header['instrument_type'] = ""
-    header['comments'] = []
+    header['history'] = []
     read_next_line = True
     while "*END*"  not in line and line.startswith(('*','#')):
 
@@ -203,8 +205,6 @@ def parse_seabird_file_header(f):
         header['bottle_columns'] = ['Bottle','Date'] + [var_columns[index:index+var_width].strip() for index in range(0, len(var_columns),var_width)]
         # Read  Position Time line
         line = f.readline()
-    
-    header['comments'] = '\n'.join(header['comments'])
     return header
             
 def generate_seabird_cf_history(attrs, drop_processing_attrs=False):
@@ -220,7 +220,7 @@ def generate_seabird_cf_history(attrs, drop_processing_attrs=False):
             step_attrs.update(extra.groupdict()) 
         history += [f"{iso_date_str} - {step_attrs}"]
     # Sort history by date
-    attrs['history'] = '\n'.join(sorted(history))
+    attrs['history'] = '\n'.join(attrs.get('history',[]) + sorted(history))
 
     # Drop processing attributes
     if drop_processing_attrs:
