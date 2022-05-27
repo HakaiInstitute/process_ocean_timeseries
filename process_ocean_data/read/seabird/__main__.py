@@ -53,15 +53,19 @@ def btl(file_path,output='xarray'):
         df = pd.read_fwf(f,widths=[10,12]+ [11]*(len(header['bottle_columns'])-1), names=variable_list)
 
     # Split statistical data info separate dateframes
-    df_avg = df.iloc[::2,:].reset_index()
-    df_std = df.iloc[1::2,:].reset_index().add_suffix('_sdev')
-    df = df_avg.join(df_std)
-
+    df['bottle'] = df['bottle'].ffill().astype(int)
+    df['stats'] = df['stats'].str.extract('\((.*)\)')
+    df = df.set_index('bottle')
+    df_grouped = df.query("stats=='avg'")
+    for stats in df.query("stats!='avg'")['stats'].drop_duplicates().to_list():
+        df_grouped = df_grouped.join(df.query("stats==@stats").add_suffix(f"_{stats}"))
+    df = df_grouped
     # Generate time variable
-    df['time'] = pd.to_datetime(df['date'] + ' ' + df['date_sdev'])
+    df['time'] = pd.to_datetime(df.filter(like='date').apply(' '.join,axis='columns'))
     
     # Ignore extra variables
-    df = df.drop(columns=['date','date_sdev','stats','stats_sdev','index_sdev','bottle_sdev'])
+    drop_columns = [col for col in df if re.search('^date|^stats|^bottle_',col)]
+    df = df.drop(columns=drop_columns)
 
     # Improve metadata
     n_scan_per_bottle =  int(header['datcnv_scans_per_bottle'])
@@ -228,7 +232,7 @@ def generate_seabird_cf_history(attrs, drop_processing_attrs=False):
 
 if __name__ == '__main__':    
     parser = argparse.ArgumentParser(description='Parse Seabird Instruments File Formats')
-    parser.add_argument('--input',help='file inptut (btl or cnv')
+    parser.add_argument(dest='input', help='file inptut (btl or cnv',default=None)
 
     args = parser.parse_args()
     if args.input:
