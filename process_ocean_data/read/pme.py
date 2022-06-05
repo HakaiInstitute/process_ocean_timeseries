@@ -5,6 +5,7 @@ PME Instruments https://www.pme.com/
 import logging
 import re
 import warnings
+from datetime import datetime
 
 import pandas as pd
 
@@ -21,20 +22,17 @@ vars_attributes = {
         "standard_name": "mass_concentration_of_oxygen_in_sea_water",
         "comments": "at Salinity=0 and pressure=0",
     },
-    "BV (Volts)": {
-        "long_name": "Battery Voltage",
-        "units": "Volts"
-    }
+    "BV (Volts)": {"long_name": "Battery Voltage", "units": "Volts"},
 }
 
 vars_rename = {
-    "Time":"time",
+    "Time (sec)": "time",
     "T (deg C)": "temperature",
-    "BV (Volts)": "battery_voltage",
+    "BV (Volts)": "batt_volt",
     "DO (mg/l)": "do_mg_l",
     "Q ()": "q",
-    "dissolved_oxygen_saturation_percentage": "dissolved_oxygen_saturation_percentage"
 }
+
 
 def minidot_txt(path, output="xarray"):
     """
@@ -61,15 +59,9 @@ def minidot_txt(path, output="xarray"):
             infer_datetime_format=True,
             date_parser=lambda x: pd.to_datetime(x, unit="s", utc=True),
         ).to_xarray()
-    
-    # Retrieve raw saturation values from minidot, assume 0 salinity and at surface (pressure=0).
-    ds['dissolved_oxygen_saturation_percentage'] = retrieve_oxygen_saturation_percent(ds['DO (mg/l)'],ds['T (deg C)'],salinity=0,pressure=0)
 
-    # Add attributes to the dataset and rename variables to mapped names.
-    for var in ds:
-        if var in vars_attributes:
-            ds[var].attrs = vars_attributes[var]
-    ds = ds.rename_vars(vars_rename)
+    # Strip whitespaces from variables names
+    ds = ds.rename({var: var.strip() for var in ds.keys()})
 
     # Global attributes
     ds.attrs = metadata.groupdict()
@@ -81,6 +73,25 @@ def minidot_txt(path, output="xarray"):
             "history": "",
         }
     )
+
+    # Retrieve raw saturation values from minidot, assume 0 salinity and at surface (pressure=0).
+    if "DO (mg/l)" in ds:
+        ds["do_perc_sat"] = retrieve_oxygen_saturation_percent(
+            ds["DO (mg/l)"], ds["T (deg C)"], salinity=0, pressure=0, units="mg/l"
+        )
+        ds.attrs[
+            "history"
+        ] += f"\n{datetime.now().isoformat()} Retrieve Oxygen Saturation Percentage values from 'DO (mg/l)' and 'T (deg C)' by assuming 0 salinity and at surface (pressure=0)"
+
+    # Add attributes to the dataset and rename variables to mapped names.
+    for var in ds:
+        if var in vars_attributes:
+            ds[var].attrs = vars_attributes[var]
+    ds = ds.rename_vars(vars_rename)
+    ds.attrs[
+        "history"
+    ] += f"\n{datetime.now().isoformat()} Apply variable rename: {vars_rename}"
+
     # Output
     if output == "xarray":
         return ds
@@ -113,7 +124,7 @@ def minidot_txts(paths: list or str):
             print(f"Ignore {path}")
             continue
         # Read txt file
-        df = df.append(minidot_txt(path,output='dataframe'))
+        df = df.append(minidot_txt(path, output="dataframe"))
 
     return df
 
@@ -140,7 +151,7 @@ def minidot_cat(path):
         ds = pd.read_csv(f, names=names).to_xarray()
 
     # Include units
-    for name,units in zip(names,units):
+    for name, units in zip(names, units):
         if units:
             ds[name].attrs[units] = units
 
@@ -158,14 +169,20 @@ def minidot_cat(path):
     return ds
 
 
-def retrieve_oxygen_saturation_percent(do_conc,temp,pressure=0,salinity=0,units='mg/l',):
+def retrieve_oxygen_saturation_percent(
+    do_conc,
+    temp,
+    pressure=0,
+    salinity=0,
+    units="mg/l",
+):
     """Convert minidot raw oxygen concentration corrected for temperature and add fix salinity and pressure to saturation percent."""
     # Convert mg/l to umol/l concentration
-    if units=='mg/l':
+    if units == "mg/l":
         do_conc = 31.2512 * do_conc
-        units = 'umol/l'
-    if units != 'umol/l':
-        logger.error(f'Uncompatble units: {units}')
+        units = "umol/l"
+    if units != "umol/l":
+        logger.error(f"Uncompatble units: {units}")
         return
 
-    return O2ctoO2s(do_conc,temp,salinity,pressure)
+    return O2ctoO2s(do_conc, temp, salinity, pressure)
