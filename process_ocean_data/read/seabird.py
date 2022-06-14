@@ -10,9 +10,8 @@ import argparse
 
 SBE_TIME_FORMAT = '%B %d %Y %H:%m:%s' # Jun 23 2016 13:51:30
 logger = logging.getLogger(__name__)
-# TODO load reference json file
 
-reference_vocabulary_path = os.path.join(os.path.dirname(__file__),'seabird_variable_attributes.json')
+reference_vocabulary_path = os.path.join(os.path.dirname(__file__),'vocabularies','seabird_variable_attributes.json')
 with open(reference_vocabulary_path) as f:
     seabird_variable_attributes = json.load(f)
 
@@ -243,10 +242,3 @@ if __name__ == '__main__':
             btl(args.input)
         elif args.input.endswith('cnv'):
             cnv(args.input)
-
-
-
-# TODO add console input
-test_file_path = "/Users/jessybarrette/repo/process_ocean_timeseries/process_ocean_data/read/test/seabird/MI18MHDR.btl"
-output = btl(test_file_path)
-output
