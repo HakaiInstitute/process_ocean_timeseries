@@ -18,7 +18,6 @@ setup(
         "xmltodict",
         "tqdm",
         "pytz",
-        "seabird @ git+https://github.com/cioos-siooc/seabird.git@cioos_dev",
         "utm",
         "beautifulsoup4",
         "matplotlib",

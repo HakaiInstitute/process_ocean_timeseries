@@ -1,2 +1,3 @@
 recursive-include process_ocean_data/qc_config *
 include process_ocean_data/tools/ios_adcp_processing_metadata_form.csv
+recursive-include process_ocean_data/read/vocabularies *
