@@ -33,16 +33,13 @@ def update_database_table(
             writer.writerows(data_iter)
             s_buf.seek(0)
 
-            columns = ", ".join('"{}"'.format(k) for k in keys)
-            if table.schema:
-                table_name = "{}.{}".format(table.schema, table.name)
-            else:
-                table_name = table.name
-
+            columns = ", ".join(f'"{k}"' for k in keys)
+            table_name = f"{table.schema}.{table.name}" if table.schema else table.name
             if distinct_columns:
                 on_conflict = f"ON CONFLICT ({','.join(distinct_columns)}) DO "
                 if if_row_exist == "UPDATE":
-                    on_conflict += f"UPDATE  SET ({','.join(available_columns)}) = ({','.join(['EXCLUDED.'+item for item in available_columns])})"
+                    on_conflict += f"UPDATE  SET ({','.join(available_columns)}) = ({','.join([f'EXCLUDED.{item}' for item in available_columns])})"
+
                 else:
                     on_conflict += "NOTHING"
             else:
@@ -101,11 +98,7 @@ def psql_insert_copy(table, conn, keys, data_iter):
         writer.writerows(data_iter)
         s_buf.seek(0)
 
-        columns = ", ".join('"{}"'.format(k) for k in keys)
-        if table.schema:
-            table_name = "{}.{}".format(table.schema, table.name)
-        else:
-            table_name = table.name
-
-        sql = "COPY {} ({}) FROM STDIN WITH CSV".format(table_name, columns)
+        columns = ", ".join(f'"{k}"' for k in keys)
+        table_name = f"{table.schema}.{table.name}" if table.schema else table.name
+        sql = f"COPY {table_name} ({columns}) FROM STDIN WITH CSV"
         cur.copy_expert(sql=sql, file=s_buf)
