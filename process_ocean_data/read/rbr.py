@@ -2,7 +2,7 @@ import pandas as pd
 import re
 
 
-def rtext(file_path, encoding='UTF-8', errors='ignore'):
+def rtext(file_path, encoding="UTF-8", errors="ignore"):
     """
     Read RBR R-Text format.
     :param errors: default ignore
@@ -26,8 +26,8 @@ def rtext(file_path, encoding='UTF-8', errors='ignore'):
                 key, item = re.split(r"\s*[:=]\s*", line, 1)
 
                 # If line has key[index].subkey format
-                if re.match(r'.*\[\d+\]\..*', key):
-                    items = re.search(r'(.*)\[(\d+)\]\.(.*)', key)
+                if re.match(r".*\[\d+\]\..*", key):
+                    items = re.search(r"(.*)\[(\d+)\]\.(.*)", key)
                     key = items[1]
                     index = items[2]
                     subkey = items[3].strip()
@@ -44,14 +44,13 @@ def rtext(file_path, encoding='UTF-8', errors='ignore'):
             else:
                 print(f"Ignored: {line}")
         # Read NumberOFSamples line
-        metadata['NumberOfSamples'] = int(line.rsplit('=')[1])
+        metadata["NumberOfSamples"] = int(line.rsplit("=")[1])
 
         # Read data
-        df = pd.read_csv(fid, sep='\s\s+')
+        df = pd.read_csv(fid, sep="\s\s+")
 
         # Make sure that line count is good
-        if len(df) != metadata['NumberOfSamples']:
-            raise RuntimeError('Data length do not match expected Number of Samples')
+        if len(df) != metadata["NumberOfSamples"]:
+            raise RuntimeError("Data length do not match expected Number of Samples")
 
         return df, metadata
-
