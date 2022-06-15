@@ -47,7 +47,7 @@ def rtext(file_path, encoding="UTF-8", errors="ignore"):
         metadata["NumberOfSamples"] = int(line.rsplit("=")[1])
 
         # Read data
-        df = pd.read_csv(fid, sep="\s\s+")
+        df = pd.read_csv(fid, sep="\s\s+", engine='python')
 
         # Make sure that line count is good
         if len(df) != metadata["NumberOfSamples"]:
