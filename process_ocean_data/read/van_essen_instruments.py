@@ -1,14 +1,27 @@
 import pandas as pd
-
+import json
 import re
 import logging
+from .utils import test_parsed_dataset
 
 logger = logging.getLogger(__name__)
 
 header_end = "[Data]\n"
+van_essen_variable_mapping = {
+    "PRESSURE": "pressure",
+    "TEMPERATURE": "temperature",
+    "CONDUCTIVITY": "conductivity",
+    "SPEC.COND.": "specific_conductance",
+}
 
 
-def MON(file_path, encoding="UTF-8", errors="ignore"):
+def MON(
+    file_path,
+    encoding="UTF-8",
+    output=None,
+    standardize_variable_names=True,
+    errors="ignore",
+):
     """
     Read MON file format from Van Essen Instrument format.
     :param errors: default ignore
@@ -18,6 +31,9 @@ def MON(file_path, encoding="UTF-8", errors="ignore"):
     """
     # MON File Header end
     header_end = "[Data]\n"
+
+    def date_parser(time):
+        return pd.to_datetime(f"{time} {timezone}", utc=True)
 
     with open(file_path, encoding=encoding, errors=errors) as fid:
         line = ""
@@ -52,6 +68,14 @@ def MON(file_path, encoding="UTF-8", errors="ignore"):
         # Find first how many records exist
         info["n_records"] = int(fid.readline())
 
+        # Retrieve timezone
+        timezone = (
+            re.search("UTC([\-\+]*\d+)", info["Series settings"]["Instrument number"])[
+                1
+            ]
+            + ":00"
+        )
+
         # Read data (Seperator is minimum 2 spaces)
         df = pd.read_csv(
             fid,
@@ -60,6 +84,9 @@ def MON(file_path, encoding="UTF-8", errors="ignore"):
             sep="\s\s+",
             skipfooter=1,
             engine="python",
+            comment="END OF DATA FILE OF DATALOGGER FOR WINDOWS",
+            parse_dates=["time"],
+            date_parser=date_parser,
         )
 
     # If there's less data then expected send a warning
@@ -67,50 +94,53 @@ def MON(file_path, encoding="UTF-8", errors="ignore"):
         assert RuntimeWarning(
             f'Missing data, expected {info["n_records"]} and found only {len(df)}'
         )
+    # Convert to xarray
+    ds = df.to_xarray()
 
-    # Remove last line
-    if df.iloc[-1]["time"] == "END OF DATA FILE OF DATALOGGER FOR WINDOWS":
-        # Crop the end
-        df = df.iloc[: info["n_records"]]
+    # Ignore column number in variable names
+    ds = ds.rename({var: re.sub("^\d+\:\s*", "", var) for var in ds})
 
-    # Convert time variable to UTC
-    timezone = (
-        re.search("UTC([\-\+]*\d+)", info["Series settings"]["Instrument number"])[1]
-        + ":00"
-    )
-    df["time"] += " " + timezone
-    df["time"] = pd.to_datetime(df["time"], utc=True)
-
-    df = df.rename(
-        columns={"1: CONDUCTIVITY": "CONDUCTIVITY", "2: SPEC.COND.": "SPEC.COND."}
-    )
     # IF PRESSURE in cm, convert to meter
-    if "PRESSURE" in df.columns and "cm" in info["Channel"]["PRESSURE"]["Range"]:
-        logger.info("Convert Pressure from cm to m")
-        df["PRESSURE"] = df["PRESSURE"] / 100
+    if "PRESSURE" in ds and "cm" in info["Channel"]["PRESSURE"]["Range"]:
+        logger.warning("Convert Pressure from cm to m")
+        ds["PRESSURE"] = ds["PRESSURE"] / 100
 
     # Add Conductivity if missing
-    if "CONDUCTIVITY" not in df.columns and "SPEC.COND." in df.columns:
-        df["CONDUCTIVITY"] = specific_conductivity_to_conductivity(
-            df["SPEC.COND."], df["TEMPERATURE"]
+    if "CONDUCTIVITY" not in ds and "SPEC.COND." in ds:
+        ds["CONDUCTIVITY"] = specific_conductivity_to_conductivity(
+            ds["SPEC.COND."], ds["TEMPERATURE"]
         )
 
     # Specific Conductance if missing
-    if "CONDUCTIVITY" in df.columns and "SPEC.COND." not in df.columns:
-        df["SPEC.COND."] = conductivity_to_specific_conductivity(
-            df["CONDUCTIVITY"], df["TEMPERATURE"]
+    if "CONDUCTIVITY" in ds and "SPEC.COND." not in ds:
+        ds["SPEC.COND."] = conductivity_to_specific_conductivity(
+            ds["CONDUCTIVITY"], ds["TEMPERATURE"]
         )
 
     # Reformat metadata to CF/ACDD standard
-    metadata = {
+    ds.attrs = {
         "instrument_manufacturer": "Van Essen Instruments",
         "instrument_type": info["Logger settings"]["Instrument type"],
         "instrument_sn": info["Logger settings"]["Serial number"],
         "time_coverage_resolution": info["Logger settings"]["Sample period"],
-        "original_metadata": info,
+        "original_metadata": json.dumps(info),
     }
+    # Standardize variables
+    if standardize_variable_names:
+        ds = ds.rename(van_essen_variable_mapping)
 
-    return df, metadata
+    # Run tests on parsed data
+    test_parsed_dataset(ds)
+
+    # Output
+    if output == "dataframe":
+        df = ds.to_pandas()
+        for var in ["instrument_manufacturer", "instrument_type", "instrument_sn"][
+            ::-1
+        ]:
+            df.insert(0, var, ds.attrs[var])
+        return df
+    return ds
 
 
 def specific_conductivity_to_conductivity(
