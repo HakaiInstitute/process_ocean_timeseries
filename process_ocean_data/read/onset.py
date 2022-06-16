@@ -85,7 +85,9 @@ def parse_onset_csv_header(header_lines):
     variables = {}
     for col in original_columns:
         column_with_units = re.sub(
-            f"\s*\({0,1}(LGR|SEN) S\/N\: .*|[^\(]*{header['plot_title']}", "", col
+            f"\s*\(*(LGR|SEN) S\/N\: .*|[^\(]*{header['plot_title']}|\(LBL\:\w*",
+            "",
+            col,
         )
         column = re.split("\,|\(|\)", column_with_units)[0].strip()
         variables[column] = {
