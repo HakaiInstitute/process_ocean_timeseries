@@ -185,7 +185,7 @@ def csv(
     # # Review units and convert SI system
     if convert_units_to_si and standardize_variable_names:
         if "temperature" in ds and ("C" not in ds["temperature"].attrs["units"]):
-            string_comment = f"Convert temperature ({ds['temperature'].attrs['units']}) to degree Celius [(degF-32)/1.8000]"
+            string_comment = f"Convert temperature ({ds['temperature'].attrs['units']}) to degree Celsius [(degF-32)/1.8000]"
             logger.warning(string_comment)
             ds["temperature"] = (ds["temperature"] - 32.0) / 1.8000
             ds["temperature"].attrs["units"] = "degC"
