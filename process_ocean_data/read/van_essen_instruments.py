@@ -20,7 +20,7 @@ def MON(
     encoding="UTF-8",
     output=None,
     standardize_variable_names=True,
-    errors="ignore",
+    errors="strict",
 ):
     """
     Read MON file format from Van Essen Instrument format.

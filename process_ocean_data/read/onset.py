@@ -139,8 +139,9 @@ def csv(
     if input_read_csv_kwargs is None:
         input_read_csv_kwargs = {}
     encoding = input_read_csv_kwargs.get("encoding", "UTF-8")
+    encoding_errors = input_read_csv_kwargs.get("encoding_errors", "strict")
     raw_header = []
-    with open(path, "r", encoding=encoding) as f:
+    with open(path, "r", encoding=encoding, errors=encoding_errors) as f:
         raw_header += [f.readline().replace("\n", "")]
         header_lines = 1
         if "Serial Number:" in raw_header[0]:
@@ -167,7 +168,6 @@ def csv(
         "skip_blank_lines": True,
         "memory_map": True,
         "encoding": encoding,
-        "engine": "python",
         "names": list(variables.keys()),
     }
     read_csv_kwargs.update(input_read_csv_kwargs)
