@@ -53,9 +53,11 @@ def parse_onset_time(time, timezone="UTC"):
         time_format = r"%m/%d/%y %I:%M:%S %p"
     elif re.match(r"\d\d\/\d\d\/\d\d\s+\d\d\:\d\d", time):
         time_format = r"%m/%d/%y %H:%M"
-    elif re.match(r"\d\d\-\d\d\-\d\d\s+\d{1,2}\:\d\d", time):
+    elif re.match(r"\d\d\d\d\-\d\d\-\d\d\s+\d\d\:\d\d\:\d\d (AM|PM)", time):
+        time_format = r"%Y-%m-%d %I:%M:%S %p"
+    elif re.match(r"^\d\d\-\d\d\-\d\d\s+\d{1,2}\:\d\d$", time):
         time_format = r"%y-%m-%d %H:%M"
-    elif re.match(r"\d\d\d\d\-\d\d\-\d\d\s+\d{1,2}\:\d\d", time):
+    elif re.match(r"^\d\d\d\d\-\d\d\-\d\d\s+\d{1,2}\:\d\d$", time):
         time_format = r"%Y-%m-%d %H:%M"
     else:
         time_format = None
@@ -188,7 +190,7 @@ def csv(
     if convert_units_to_si and standardize_variable_names:
         if "temperature" in ds and ("C" not in ds["temperature"].attrs["units"]):
             string_comment = f"Convert temperature ({ds['temperature'].attrs['units']}) to degree Celsius [(degF-32)/1.8000]"
-            logger.warning(string_comment) 
+            logger.warning(string_comment)
             ds["temperature"] = (ds["temperature"] - 32.0) / 1.8000
             ds["temperature"].attrs["units"] = "degC"
             ds.attrs["history"] += f"{datetime.now()} {string_comment}"
