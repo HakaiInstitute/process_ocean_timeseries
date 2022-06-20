@@ -55,6 +55,8 @@ def parse_onset_time(time, timezone="UTC"):
         time_format = r"%m/%d/%y %I:%M:%S %p"
     elif re.match(r"\d\d\/\d\d\/\d\d\s+\d\d\:\d\d", time):
         time_format = r"%m/%d/%y %H:%M"
+    elif re.match(r"\d+\/\d+\/\d\d\s+\d\d\:\d\d", time):
+        time_format = r"%m/%d/%y %H:%M"
     elif re.match(r"^\d\d\d\d\-\d\d\-\d\d\s+\d\d\:\d\d\:\d\d$", time):
         time_format = r"%Y-%m-%d %H:%M:%S"
     elif re.match(r"\d\d\d\d\-\d\d\-\d\d\s+\d\d\:\d\d\:\d\d (AM|PM)", time):
@@ -153,7 +155,7 @@ def csv(
     if input_read_csv_kwargs is None:
         input_read_csv_kwargs = {}
     encoding = input_read_csv_kwargs.get("encoding", "UTF-8")
-    encoding_errors = input_read_csv_kwargs.get("encoding_errors", "strict")
+    encoding_errors = input_read_csv_kwargs.get("encoding_errors")
     raw_header = []
     with open(path, "r", encoding=encoding, errors=encoding_errors) as f:
         raw_header += [f.readline().replace("\n", "")]
