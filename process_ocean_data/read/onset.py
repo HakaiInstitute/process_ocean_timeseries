@@ -75,7 +75,7 @@ def parse_onset_csv_header(header_lines):
         "logger_sn": ",".join(set(re.findall("LGR S\/N\: (\d*)", full_header))),
         "sensor_sn": ",".join(set(re.findall("SEN S\/N\: (\d*)", full_header))),
         "instrument_sn": ",".join(
-            set(re.findall("(?:SEN S\/N|LGR S\/N|Serial Number): (\d+)", full_header))
+            set(re.findall("(?:SEN S\/N|LGR S\/N|Serial Number):\s*(\d+)", full_header))
         ),
         "lbl": ",".join(set(re.findall("lbl: (\d*)", full_header))),
     }
@@ -188,7 +188,7 @@ def csv(
     if convert_units_to_si and standardize_variable_names:
         if "temperature" in ds and ("C" not in ds["temperature"].attrs["units"]):
             string_comment = f"Convert temperature ({ds['temperature'].attrs['units']}) to degree Celsius [(degF-32)/1.8000]"
-            logger.warning(string_comment)
+            logger.warning(string_comment) 
             ds["temperature"] = (ds["temperature"] - 32.0) / 1.8000
             ds["temperature"].attrs["units"] = "degC"
             ds.attrs["history"] += f"{datetime.now()} {string_comment}"
