@@ -17,10 +17,9 @@ van_essen_variable_mapping = {
 
 def MON(
     file_path,
-    encoding="UTF-8",
     output=None,
     standardize_variable_names=True,
-    errors="strict",
+    kwargs_input_read_csv=None,
 ):
     """
     Read MON file format from Van Essen Instrument format.
@@ -35,7 +34,13 @@ def MON(
     def date_parser(time):
         return pd.to_datetime(f"{time} {timezone}", utc=True)
 
-    with open(file_path, encoding=encoding, errors=errors) as fid:
+    if kwargs_input_read_csv is None:
+        kwargs_input_read_csv = {}
+    with open(
+        file_path,
+        encoding=kwargs_input_read_csv.get("encoding"),
+        errors=kwargs_input_read_csv.get("encoding_errors"),
+    ) as fid:
         line = ""
         section = "header_info"
         info = {section: {}}

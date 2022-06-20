@@ -25,8 +25,8 @@ CREATED BY : Diver-Office 11.2.0.10
   Altitude                =0         m
 [Channel 2]
   Identification          =TEMPERATURE
-  Reference level         =-20.000   캜
-  Range                   =100.000   캜
+  Reference level         =-20.000   째C
+  Range                   =100.000   째C
 
 
 [Channel 3]
@@ -51,8 +51,8 @@ CREATED BY : Diver-Office 11.2.0.10
   Altitude                =0         m
 [Channel 2 from data header]
   Identification          =TEMPERATURE
-  Reference level         =-20.000   캜
-  Range                   =100.000   캜
+  Reference level         =-20.000   째C
+  Range                   =100.000   째C
 
 
 [Channel 3 from data header]
