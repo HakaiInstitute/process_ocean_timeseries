@@ -6,6 +6,8 @@ from csv import reader
 import logging
 from .utils import test_parsed_dataset
 
+from dateutil.parser._parser import ParserError
+
 logger = logging.getLogger(__name__)
 onset_variables_mapping = {
     "#": "record_number",
@@ -53,17 +55,27 @@ def parse_onset_time(time, timezone="UTC"):
         time_format = r"%m/%d/%y %I:%M:%S %p"
     elif re.match(r"\d\d\/\d\d\/\d\d\s+\d\d\:\d\d", time):
         time_format = r"%m/%d/%y %H:%M"
+    elif re.match(r"^\d\d\d\d\-\d\d\-\d\d\s+\d\d\:\d\d\:\d\d$", time):
+        time_format = r"%Y-%m-%d %H:%M:%S"
     elif re.match(r"\d\d\d\d\-\d\d\-\d\d\s+\d\d\:\d\d\:\d\d (AM|PM)", time):
         time_format = r"%Y-%m-%d %I:%M:%S %p"
     elif re.match(r"^\d\d\-\d\d\-\d\d\s+\d{1,2}\:\d\d$", time):
         time_format = r"%y-%m-%d %H:%M"
     elif re.match(r"^\d\d\d\d\-\d\d\-\d\d\s+\d{1,2}\:\d\d$", time):
         time_format = r"%Y-%m-%d %H:%M"
+    elif time in ("", None):
+        return pd.NaT
     else:
         time_format = None
-    return (
-        pd.to_datetime(time, format=time_format).tz_localize(timezone).tz_convert("UTC")
-    )
+    try:
+        return (
+            pd.to_datetime(time, format=time_format)
+            .tz_localize(timezone)
+            .tz_convert("UTC")
+        )
+    except ParserError:
+        logging.error(f"Failed to convert to timestamp: {time}", exc_info=True)
+        return pd.NaT
 
 
 def parse_onset_csv_header(header_lines):
@@ -157,6 +169,7 @@ def csv(
     header, variables = parse_onset_csv_header(raw_header)
 
     # Inputs to pd.read_csv
+    column_names = [var for var in list(variables.keys()) if var]
     read_csv_kwargs = {
         "na_values": [" "],
         "infer_datetime_format": True,
@@ -166,11 +179,12 @@ def csv(
                 col, header["timezone"]
             )
         },
+        "sep": ",",
         "header": header_lines,
-        "skip_blank_lines": True,
         "memory_map": True,
         "encoding": encoding,
-        "names": list(variables.keys()),
+        "names": column_names,
+        "usecols": [id for id, name in enumerate(column_names)],
     }
     read_csv_kwargs.update(input_read_csv_kwargs)
     df = pd.read_csv(path, **read_csv_kwargs)
